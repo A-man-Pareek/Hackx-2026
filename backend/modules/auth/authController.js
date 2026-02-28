@@ -19,6 +19,7 @@ const register = async (req, res) => {
         try {
             decodedToken = await adminAuth.verifyIdToken(idToken);
         } catch (authErr) {
+            console.error('Firebase Admin ID Token Verification Error:', authErr);
             return res.status(401).json({ success: false, error: 'Unauthorized: Invalid token', code: 401 });
         }
 
