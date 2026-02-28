@@ -193,7 +193,26 @@ const deactivate = async (req, res) => {
 };
 
 module.exports = {
+    deactivate
+};
+
+/**
+ * Return Firebase Config for Frontend
+ */
+const getFirebaseConfig = (req, res) => {
+    res.status(200).json({
+        success: true,
+        config: {
+            apiKey: process.env.FIREBASE_API_KEY,
+            authDomain: "hackx26.firebaseapp.com",
+            projectId: "hackx26"
+        }
+    });
+};
+
+module.exports = {
     register,
     getMe,
-    deactivate
+    deactivate,
+    getFirebaseConfig
 };

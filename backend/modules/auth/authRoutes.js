@@ -36,5 +36,14 @@ router.patch(
     authorizeRoles('admin'),
     authController.deactivate
 );
+/**
+ * @route   GET /auth/firebase-config
+ * @desc    Return Firebase Config for Frontend
+ * @access  Public
+ */
+router.get(
+    '/firebase-config',
+    authController.getFirebaseConfig
+);
 
 module.exports = router;

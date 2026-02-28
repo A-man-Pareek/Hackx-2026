@@ -1,14 +1,18 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBJ9cnHSjFDrid7m_-GqsnixLK7P84aeRE",
-    authDomain: "hackx26.firebaseapp.com",
-    projectId: "hackx26"
-};
+let auth;
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+// Fetch config from backend to keep API key out of frontend source code
+fetch('http://localhost:8000/auth/firebase-config')
+    .then(res => res.json())
+    .then(data => {
+        if (data.success && data.config) {
+            const app = initializeApp(data.config);
+            auth = getAuth(app);
+        }
+    })
+    .catch(err => console.error("Error loading Firebase config:", err));
 
 const signInButton = document.getElementById("signIn");
 const signUpButton = document.getElementById("signUp");
@@ -60,6 +64,11 @@ signUpForm.addEventListener('submit', async (e) => {
         return;
     }
 
+    if (!auth) {
+        alert("System initializing... Please wait a moment and try again.");
+        return;
+    }
+
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -97,6 +106,11 @@ signInForm.addEventListener('submit', async (e) => {
     const inputs = signInForm.querySelectorAll('input');
     const email = inputs[0].value;
     const password = inputs[1].value;
+
+    if (!auth) {
+        alert("System initializing... Please wait a moment and try again.");
+        return;
+    }
 
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
