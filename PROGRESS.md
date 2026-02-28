@@ -128,3 +128,29 @@ The user initiated a deep architectural hardening phase (Phase 5.5 Addendum) to 
 ### Verification Status
 - Entire testing suite modernized to incorporate the new strict Service and Middleware requirements.
 - Re-achieved 100% passing rate across **17 endpoints** mapped inside `auth.test.js`, `review.test.js`, and `analytics.test.js`.
+
+---
+
+## Phase 7: B2B2C Role Pivot & Frontend Auth Integration
+
+To transform the system into a customer-facing SaaS, the internal-only staff hierarchy was replaced by a "Customer" vs "Restaurant Owner" model. The frontend was rebranded to ReviewIQ and rewritten to host an integrated Firebase Web Auth pipeline.
+
+### Architectural Innovations
+1. **Frontend Role Split & Branding**
+   - Replaced the legacy splash screen with a dynamic Role Selection UI ("I am a Customer" / "I am a Restaurant Owner").
+   - Rebranded the platform to **ReviewIQ**.
+2. **Frontend Firebase Native SDK Integration**
+   - Migrated `login.js` into an ES module that utilizes Google's Firebase `createUserWithEmailAndPassword` and `signInWithEmailAndPassword` APIs natively.
+   - Designed a secure bridge where the frontend passes the Firebase ID Token immediately to the backend to sync role models.
+3. **Backend B2B2C Alignment**
+   - Removed legacy roles (`admin`, `branch_manager`, `staff`) from `config/roles.js`.
+   - Opened `POST /auth/register` and removed the `authorizeRoles` restriction so standard web users can self-register using their Firebase JWT.
+   - Refactored `authController.js` to parse the Firebase ID token and dynamically generate the new user document without requiring backend passwords.
+4. **Environment Security Architecture**
+   - Configured the frontend to load its Firebase Web Configuration dynamically from a new backend REST endpoint (`GET /auth/firebase-config`).
+   - Hardened repository by centralizing `apiKey`, Firebase service accounts, and Google Gemini keys entirely inside the backend `.env` file, secured behind `.gitignore`.
+
+### Verification Status
+- Complete end-to-end user registration and login flows function properly.
+- Fully simulated the public token handshake from UI to Firestore document creation.
+- 100% Passing backend test suite checking for unauthorized tokens, missing schema payloads, and conflict handling.
