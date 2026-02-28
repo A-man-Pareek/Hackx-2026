@@ -8,13 +8,144 @@
 }
 
 body {
-    background: #f6f5f7;
+    background: #000;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
     height: 100vh;
-    margin: -20px 0 50px;
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Video Background */
+.bg-video {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    z-index: -100;
+    object-fit: cover;
+}
+
+/* Video Overlay */
+.video-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: -99;
+}
+
+/* Brand Intro Container */
+.brand-intro {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+    color: white;
+    animation: fadeInSlideUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+@keyframes fadeInSlideUp {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -40%);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.brand-intro .logo {
+    font-size: 48px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.brand-intro .tagline {
+    font-size: 16px;
+    font-weight: 300;
+    margin-top: 0;
+    margin-bottom: 30px;
+    opacity: 0.9;
+}
+
+/* Initial Login Button */
+.start-login-btn {
+    position: relative;
+    padding: 15px 50px;
+    font-size: 18px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: pulse-amber 2s infinite;
+}
+
+@keyframes pulse-amber {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 25px rgba(245, 158, 11, 0.8);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+    }
+}
+
+.start-login-btn:hover {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    transform: scale(1.1);
+    box-shadow: 0 8px 30px rgba(245, 158, 11, 0.8);
+    animation: none;
+}
+
+.main-wrapper {
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.main-wrapper.show {
+    animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 h1 {
@@ -39,7 +170,7 @@ span {
 }
 
 a {
-    color: #333;
+    color: #fff;
     font-size: 14px;
     text-decoration: none;
     margin: 15px 0;
@@ -47,8 +178,8 @@ a {
 
 button {
     border-radius: 20px;
-    border: 1px solid #ff4b2b;
-    background: #ff4b2b;
+    border: none;
+    background: linear-gradient(135deg, #d97706, #f59e0b);
     color: #fff;
     font-size: 12px;
     font-weight: bold;
@@ -56,7 +187,14 @@ button {
     letter-spacing: 1px;
     text-transform: uppercase;
     cursor: pointer;
-    transition: transform 80ms ease-in;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+button:hover {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
 }
 
 button:active {
@@ -70,10 +208,16 @@ button:focus {
 button.ghost {
     background: transparent;
     border-color: #fff;
+    border: 1px solid #fff;
+    box-shadow: none;
+}
+
+button.ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
 form {
-    background: #fff;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -81,22 +225,38 @@ form {
     padding: 0 50px;
     height: 100%;
     text-align: center;
+    color: #fff;
 }
 
 input {
-    background: #eee;
-    border: none;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
     padding: 12px 15px;
     margin: 8px 0;
     width: 100%;
+    transition: all 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .container {
-    background: #fff;
+    background: rgba(0, 0, 0, 0.4);
     border-radius: 10px;
-    box-shadow:
-        0 14px 28px rgba(0, 0, 0, 0.25),
-        0 10px 10px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.4);
+    /* Amber premium glow */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     overflow: hidden;
     width: 768px;
@@ -118,6 +278,10 @@ input {
 
 .container.right-panel-active .sign-in-container {
     transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+    /* Prevent clicks when hidden */
+    z-index: 1;
 }
 
 .sign-up-container {
@@ -152,36 +316,43 @@ input {
 .overlay-container {
     position: absolute;
     top: 0;
-    left: 50%;
-    width: 50%;
+    left: 0;
+    width: 100%;
     height: 100%;
-    overflow: hidden;
-    transition: transform 0.6s ease-in-out;
+    overflow: visible;
+    transition: clip-path 0.6s ease-in-out, filter 0.6s ease-in-out;
     z-index: 100;
+    /* Slanted from right-center to bottom-left. Covers the right half */
+    clip-path: polygon(60% 0, 100% 0, 100% 100%, 45% 100%);
+    pointer-events: none;
+    /* Allow clicks to pass through to the form beneath where clipped */
+    /* Add the glowing orange edge */
+    filter: drop-shadow(-8px 0 15px rgba(245, 158, 11, 0.9));
 }
 
 .container.right-panel-active .overlay-container {
-    transform: translateX(-100%);
+    /* Mirrored slant. Covers the left half */
+    clip-path: polygon(0 0, 55% 0, 45% 100%, 0 100%);
+
+    /* Moves the glow to trace the right-facing diagonal line instead */
+    filter: drop-shadow(8px 0 15px rgba(245, 158, 11, 0.9));
 }
 
 .overlay {
-    background: #ff416c;
-    background: -webkit-linear-gradient(to right, #ff4b2b, #ff416c);
-    background: linear-gradient(to right, #ff4b2b, #ff416c);
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: 0 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     color: #fff;
     position: relative;
-    left: -100%;
+    left: 0;
     height: 100%;
-    width: 200%;
-    transform: translateX(0);
-    transition: transform 0.6s ease-in-out;
+    width: 100%;
+    pointer-events: auto;
+    /* Re-enable clicks on the visible overlay section */
 }
 
 .container.right-panel-active .overlay {
-    transform: translateX(50%);
+    /* The internal glow logic is moved to drop-shadow on overlay-container */
 }
 
 .overlay-panel {
@@ -195,25 +366,33 @@ input {
     top: 0;
     height: 100%;
     width: 50%;
-    transform: translateX(0);
-    transition: transform 0.6s ease-in-out;
+    transition: transform 0.6s ease-in-out, opacity 0.6s ease-in-out;
 }
 
 .overlay-left {
-    transform: translateX(-20%);
+    left: 0;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
 }
 
 .container.right-panel-active .overlay-left {
     transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .overlay-right {
     right: 0;
     transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .container.right-panel-active .overlay-right {
-    transform: translateX(20%);
+    transform: translateX(50%);
+    opacity: 0;
+    pointer-events: none;
 }
 
 .social-container {
@@ -221,7 +400,9 @@ input {
 }
 
 .social-container a {
-    border: 1px solid #ddd;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
     border-radius: 50%;
     display: inline-flex;
     justify-content: center;
@@ -229,4 +410,9 @@ input {
     margin: 0 5px;
     height: 40px;
     width: 40px;
+    transition: background 0.3s ease;
+}
+
+.social-container a:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
