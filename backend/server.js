@@ -10,6 +10,7 @@ const branchRoutes = require('./modules/branches/branchRoutes');
 const staffRoutes = require('./modules/staff/staffRoutes');
 const reviewRoutes = require('./modules/reviews/reviewRoutes');
 const responseRoutes = require('./modules/responses/responseRoutes');
+const analyticsRoutes = require('./modules/analytics/analyticsRoutes'); // NEW Analytics routes
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/branches', branchRoutes);
 app.use('/staff', staffRoutes);
 app.use('/reviews', reviewRoutes);
 app.use('/responses', responseRoutes);
+app.use('/api/analytics', analyticsRoutes); // NEW Analytics routes
 
 // ---------------------------------------------------------------------------
 // Route: /api/sync-reviews

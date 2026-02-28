@@ -1,6 +1,6 @@
-const { db } = require('../../config/firebase');
-
-const VALID_ROLES = ['admin', 'branch_manager', 'staff'];
+const { db, adminAuth } = require('../../config/firebase');
+const VALID_ROLES = require('../../config/roles');
+const AuditService = require('../audit/auditService');
 
 /**
  * Validates role escalation:
@@ -9,24 +9,30 @@ const VALID_ROLES = ['admin', 'branch_manager', 'staff'];
  */
 const canCreateRole = (currentUserRole, targetRole) => {
     if (currentUserRole === 'admin') {
-        return ['admin', 'branch_manager', 'staff'].includes(targetRole);
+        return VALID_ROLES.includes(targetRole);
+    }
+    // Phase 1 Rules: Branch managers can create staff
+    if (currentUserRole === 'branch_manager') {
+        return targetRole === 'staff';
     }
     return false;
 };
 
 /**
- * Create user metadata in Firestore after Firebase account creation.
+ * Register a new user and assign their role.
+ * Only an admin can perform this action.
  */
 const register = async (req, res) => {
     try {
-        const { uid, name, email, role, branchId } = req.body;
+        const { name, email, password, role, branchId } = req.body; // Removed uid from req.body, added password
         const creatorRole = req.user.role; // Attached by authMiddleware
+        const creatorUid = req.user.uid;
 
         // Basic Validation
-        if (!uid || !name || !email || !role) {
+        if (!name || !email || !password || !role) {
             return res.status(400).json({
                 success: false,
-                error: 'Bad Request: Missing required fields (uid, name, email, role)',
+                error: 'Bad Request: Missing required fields (name, email, password, role)',
                 code: 400
             });
         }
@@ -75,18 +81,16 @@ const register = async (req, res) => {
             });
         }
 
-        const userRef = db.collection('users').doc(uid);
-        const userDoc = await userRef.get();
+        // 1. Create user in Firebase Authentication
+        const userRecord = await adminAuth.createUser({
+            email,
+            password,
+            displayName: name,
+            disabled: false,
+        });
 
-        if (userDoc.exists) {
-            return res.status(400).json({
-                success: false,
-                error: 'Bad Request: User already exists in Firestore',
-                code: 400
-            });
-        }
-
-        const newUserData = {
+        // 2. Store user metadata in Firestore
+        const newUser = {
             name,
             email,
             role,
@@ -95,15 +99,38 @@ const register = async (req, res) => {
             createdAt: new Date().toISOString() // Or admin.firestore.FieldValue.serverTimestamp()
         };
 
-        await userRef.set(newUserData);
+        const userRef = db.collection('users').doc(userRecord.uid);
+        await userRef.set(newUser);
+
+        // 3. Audit Logger integration
+        await AuditService.logEvent({
+            actorUid: creatorUid,
+            action: 'USER_REGISTERED',
+            targetId: userRecord.uid,
+            targetType: 'user',
+            branchId: req.user.branchId,
+            metadata: { assignedRole: role, assignedBranchId: branchId || null, email: email, name: name }
+        });
 
         return res.status(201).json({
             success: true,
-            message: 'User registered successfully'
+            message: 'User registered successfully',
+            data: {
+                uid: userRecord.uid,
+                ...newUser
+            }
         });
 
     } catch (error) {
         console.error('Registration Error:', error);
+        // If Firebase Auth user creation succeeded but Firestore failed, clean up Auth user
+        if (error.code && error.code.startsWith('auth/') && error.code !== 'auth/email-already-exists') {
+            // This is a Firebase Auth error, but not an email-already-exists error which is handled by the client
+            // If the user was created in Auth but not in Firestore, we should delete the Auth user
+            if (error.uid) { // Assuming error object might contain uid if user was partially created
+                await adminAuth.deleteUser(error.uid).catch(deleteErr => console.error('Failed to delete partially created Auth user:', deleteErr));
+            }
+        }
         return res.status(500).json({
             success: false,
             error: 'Internal Server Error',
@@ -182,13 +209,24 @@ const deactivate = async (req, res) => {
             });
         }
 
+        await adminAuth.updateUser(targetUid, { disabled: true });
+
         await targetUserRef.update({
             isActive: false
         });
 
+        // Phase 5.5: Audit Logger integration
+        await AuditService.logEvent({
+            actorUid: req.user.uid,
+            action: 'USER_DEACTIVATED',
+            targetId: targetUid,
+            targetType: 'user',
+            branchId: req.user.branchId
+        });
+
         return res.status(200).json({
             success: true,
-            message: 'User deactivated'
+            message: `User ${targetUid} successfully deactivated.`
         });
 
     } catch (error) {

@@ -6,6 +6,10 @@ const { authenticate } = require('../auth/authMiddleware');
 // For now, protecting to adhere to general backend rules.
 const reviewController = require('./reviewController');
 
+// Validation Layer Hook
+const validateRequest = require('../../middleware/validateRequest');
+const { createReviewSchema } = require('./reviewSchemas');
+
 /**
  * @route   GET /reviews
  * @desc    Fetch reviews safely isolated by branch
@@ -25,6 +29,7 @@ router.get(
 router.post(
     '/',
     authenticate,
+    validateRequest(createReviewSchema), // Phase 5.5: Validate Payload Structurally
     reviewController.createReview
 );
 

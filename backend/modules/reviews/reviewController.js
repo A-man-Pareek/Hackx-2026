@@ -1,5 +1,5 @@
 const { db } = require('../../config/firebase');
-const { analyzeReview } = require('../ai/aiService');
+const ReviewService = require('./reviewService'); // NEW Service Layer
 
 /**
  * Handle fetching reviews.
@@ -20,7 +20,7 @@ const getReviews = async (req, res) => {
             queryBranchId = branchId;
         }
 
-        let reviewsRef = db.collection('reviews');
+        let reviewsRef = db.collection('reviews').where('isDeleted', '==', false); // Phase 5.5 safeguard
         let snapshot;
 
         if (queryBranchId) {
@@ -47,110 +47,21 @@ const getReviews = async (req, res) => {
 };
 
 /**
- * Create a review manually (in real-world this would be webhooks/crawlers, but needed for CRUD)
+ * Create a review manually
  */
 const createReview = async (req, res) => {
     try {
-        const { branchId, source, rating, reviewText, category, staffTagged, tags } = req.body;
+        // Payload has already been robustly validated by Zod at the Route level!
+        const resultPayload = await ReviewService.processReviewCreation(req.body);
 
-        if (!branchId || !source || !rating || !reviewText || !category) {
-            return res.status(400).json({ success: false, error: 'Missing required review fields', code: 400 });
-        }
-
-        // Basic sentiment mapping based on rating for FALLBACK
-        let sentiment = 'neutral';
-        if (rating >= 4) sentiment = 'positive';
-        else if (rating <= 2) sentiment = 'negative';
-
-        // PRD Flow Step 2: Create base review document (status: pending)
-        const baseReview = {
-            branchId,
-            source,
-            rating: Number(rating),
-            reviewText,
-            category,
-            sentiment,
-            sentimentConfidence: null,
-            categoryConfidence: null,
-            aiProcessed: false,
-            aiProcessingError: null,
-            isEscalated: false,
-            escalationStatus: 'none',
-            tags: tags || [],
-            staffTagged: staffTagged || null,
-            status: 'pending', // Explicit requirement
-            responseStatus: 'pending',
-            createdAt: new Date().toISOString()
-        };
-
-        const docRef = await db.collection('reviews').add(baseReview);
-
-        // PRD Flow Step 3: Call AI service
-        const aiResult = await analyzeReview(reviewText);
-
-        // PRD Flow Step 4 & 5: Receive AI result and Apply Escalation Logic
-        let finalSentiment = sentiment;
-        let finalCategory = category;
-        let sentimentConfidence = null;
-        let categoryConfidence = null;
-        let aiProcessed = false;
-        let aiProcessingError = null;
-
-        if (aiResult) {
-            finalSentiment = aiResult.sentiment;
-            finalCategory = aiResult.category;
-            sentimentConfidence = aiResult.sentimentConfidence;
-            categoryConfidence = aiResult.categoryConfidence;
-            aiProcessed = true;
-        } else {
-            aiProcessingError = "AI service failed or timed out. Used fallback logic.";
-        }
-
-        let isEscalated = false;
-        let escalationStatus = 'none';
-        let escalatedAt = null;
-
-        if (finalSentiment === 'negative' || Number(rating) <= 2) {
-            isEscalated = true;
-            escalationStatus = 'escalated';
-            escalatedAt = new Date().toISOString();
-        }
-
-        const enrichedUpdate = {
-            sentiment: finalSentiment,
-            sentimentConfidence,
-            category: finalCategory,
-            categoryConfidence,
-            aiProcessed,
-            aiProcessingError,
-            isEscalated,
-            escalationStatus
-        };
-
-        if (isEscalated) {
-            enrichedUpdate.escalatedAt = escalatedAt;
-        }
-
-        // PRD Flow Step 6: Update review document with AI enrichment
-        await docRef.update(enrichedUpdate);
-
-        // PRD Flow Step 7: Respond to client (Exact output contract)
+        // Respond with exact PRD JSON Contract
         return res.status(201).json({
             success: true,
-            data: {
-                reviewId: docRef.id,
-                rating: Number(rating),
-                sentiment: finalSentiment,
-                sentimentConfidence,
-                category: finalCategory,
-                categoryConfidence,
-                isEscalated,
-                escalationStatus
-            }
+            data: resultPayload
         });
 
     } catch (error) {
-        console.error('createReview Error:', error);
+        console.error('createReview (Service Layer) Error:', error);
         return res.status(500).json({ success: false, error: 'Internal Server Error', code: 500 });
     }
 };

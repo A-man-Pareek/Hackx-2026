@@ -60,4 +60,27 @@ const authenticate = async (req, res, next) => {
     }
 };
 
-module.exports = { authenticate };
+/**
+ * Middleware factory to authorize specific roles dynamically.
+ * Must be used AFTER `authenticate` middleware.
+ * @param  {...string} roles Array of allowed roles (e.g. 'admin', 'branch_manager')
+ */
+const authorizeRoles = (...roles) => {
+    return (req, res, next) => {
+        if (!req.user || !req.user.role) {
+            return res.status(401).json({ success: false, error: 'Unauthorized: User role not found', code: 401 });
+        }
+
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                error: `Forbidden: Requires one of roles: ${roles.join(', ')}`,
+                code: 403
+            });
+        }
+
+        next();
+    };
+};
+
+module.exports = { authenticate, authorizeRoles };

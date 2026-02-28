@@ -1,0 +1,53 @@
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:47:33"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:47:58"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:48:19"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:50:17"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:53:07"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:53:07"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:53:07"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:53:24"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:53:24"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:53:24"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:53:39"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:53:39"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:53:39"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:53:40"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: caller-uid | Target: user:mock-created-uid","service":"hackx-backend","timestamp":"2026-02-28 18:54:07"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:54:07"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:54:07"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:54:07"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:54:07"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: caller-uid | Target: user:mock-created-uid","service":"hackx-backend","timestamp":"2026-02-28 18:54:30"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:54:30"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:54:30"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:54:30"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:54:30"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: caller-uid | Target: user:mock-created-uid","service":"hackx-backend","timestamp":"2026-02-28 18:55:06"}
+{"level":"info","message":"[AUDIT] Action: USER_DEACTIVATED | Actor: caller-uid | Target: user:super-uid","service":"hackx-backend","timestamp":"2026-02-28 18:55:06"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:55:06"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:55:06"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:55:06"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:55:06"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: caller-uid | Target: user:mock-created-uid","service":"hackx-backend","timestamp":"2026-02-28 18:55:38"}
+{"level":"info","message":"[AUDIT] Action: USER_DEACTIVATED | Actor: caller-uid | Target: user:super-uid","service":"hackx-backend","timestamp":"2026-02-28 18:55:38"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:55:38"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:55:38"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:55:38"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:55:38"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:56:15"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:56:15"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:56:15"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:56:15"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: caller-uid | Target: user:mock-created-uid","service":"hackx-backend","timestamp":"2026-02-28 18:56:36"}
+{"level":"info","message":"[AUDIT] Action: USER_DEACTIVATED | Actor: caller-uid | Target: user:super-uid","service":"hackx-backend","timestamp":"2026-02-28 18:56:36"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:56:36"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:56:36"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:56:36"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:56:36"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: caller-uid | Target: user:mock-created-uid","service":"hackx-backend","timestamp":"2026-02-28 18:57:21"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: caller-uid | Target: user:mock-created-uid","service":"hackx-backend","timestamp":"2026-02-28 18:57:21"}
+{"level":"info","message":"[AUDIT] Action: USER_DEACTIVATED | Actor: caller-uid | Target: user:staff-uid","service":"hackx-backend","timestamp":"2026-02-28 18:57:21"}
+{"level":"warn","message":"Validation Error on POST /reviews:","service":"hackx-backend","timestamp":"2026-02-28 18:57:22"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 18:57:22"}
+{"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 18:57:22"}
+{"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 18:57:22"}

@@ -25,7 +25,7 @@ A secure foundation was built using **Node.js, Express.js, Firebase Admin SDK, a
 2. **`GET /auth/me`**: Seamlessly retrieves and replies with the authenticated user’s metadata.
 3. **`PATCH /auth/deactivate/:uid`**: Soft-deletes users securely by setting `isActive: false`.
 
----
+
 
 ## Phase 2: Data Models & API Integration
 
@@ -54,6 +54,29 @@ All endpoints respect the robust middleware. For example, a `GET` request will g
 #### Responses (`modules/responses`)
 * **`GET /responses?reviewId=123`**: Fetches all responses natively chained to a given review context.
 * **`POST /responses`**: Employs a **Firestore Batch Transaction** to submit the `responseText` into a new document while simultaneously updating the parent `review` document's `responseStatus` to `responded`. Ensures 100% data consistency.
+
+---
+
+## Phase 4: External Data Synchronization (Google Places API)
+
+The backend was expanded via the `server.js` entrypoint to natively interact directly with Google's REST Places APIs. This automates review ingestion dynamically creating Branch environments and harvesting live organic reviews securely.
+
+### New `models.ts` Properties Supported:
+The entire system was aligned to support incoming metadata from Google.
+* **Branches:** Appended `placeId` for external referencing.
+* **Reviews:** Appended `externalReviewId`, `authorName`, `externalTimestamp`, and `syncedAt` to deduplicate and cache live Google Review payloads. Added the explicit `source: "google"` origin state.
+
+### New Sync Modules Scaffolding (`server.js`):
+1. **`POST /api/search-and-add` (Onboarding/Discovery Endpoint)**
+   - Takes a plain text string `name` & `location`.
+   - Fires a `TextSearch` query to Google Places to locate the definitive global valid `place_id`.
+   - Follows up automatically with a `PlaceDetails` query extracting real `name`, `rating`, `user_ratings_total`, and an organic payload of maximum 5 organic recent `reviews`.
+   - **Automated Seeding:** Generates a new Branch record internally and forcefully injects the historical reviews into the system, returning `{ branchId, message }`.
+2. **`POST /api/sync-reviews` (Cron/Webhook Hydration Engine)**
+   - Takes a `branchId`. Looks up the associated `placeId` from Firestore.
+   - Pings Google Places API retrieving the freshest array of public feedback.
+   - **Intelligent Deduplication Engine:** Iterates across the payload constructing `externalReviewId = author_name + externalTimestamp`. Verifies against the Firestore index bypassing pre-existing matches securely to prevent spam loops or overlapping aggregation metrics.
+   - Saves all organic reviews instantly with the flag `sentiment: "pending"`, ensuring they are instantly caught by the asynchronous Phase 3 AI analyzer pipelines!
 
 ---
 

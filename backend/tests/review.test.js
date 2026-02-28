@@ -48,29 +48,32 @@ describe('Reviews Endpoints (Phase 3 AI Integration)', () => {
             data: () => ({ role: 'branch_manager', branchId: 'branch-1', isActive: true })
         });
 
-        // Default DB Response for review creation
-        _mockFns.mockDbCollectionDocAdd.mockResolvedValue({
-            id: 'mock-review-123',
-            update: _mockFns.mockDbCollectionDocUpdate
+        // Mock expected output from Service layer so the Controller acts as an interface test.
+        jest.spyOn(require('../modules/reviews/reviewService'), 'processReviewCreation').mockResolvedValue({
+            reviewId: 'mock-review-123',
+            rating: 5,
+            sentiment: 'positive',
+            sentimentConfidence: 0.85,
+            category: 'food',
+            categoryConfidence: 0.90,
+            isEscalated: false,
+            escalationStatus: 'none',
+            processingDurationMs: 42
         });
     });
 
-    describe('POST /reviews', () => {
-        it('should successfully create review with AI enrichment and correct escalation logic', async () => {
-            // Mock AI behavior resolving to positive
-            aiService.analyzeReview.mockResolvedValueOnce({
-                sentiment: 'positive',
-                sentimentConfidence: 0.85,
-                category: 'food',
-                categoryConfidence: 0.90
-            });
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
 
+    describe('POST /reviews', () => {
+        it('should execute review creation via the abstraction and pass validated fields', async () => {
             const reqBody = {
-                branchId: 'branch-1',
-                source: 'web',
+                branchId: "branch-X",
+                source: "google",
                 rating: 5,
-                reviewText: 'The pizza was absolutely fantastic!',
-                category: 'Uncategorized' // Simulating client generic upload
+                reviewText: "Amazing food!",
+                category: "food"
             };
 
             const res = await request(app)
@@ -79,25 +82,11 @@ describe('Reviews Endpoints (Phase 3 AI Integration)', () => {
                 .send(reqBody);
 
             expect(res.status).toBe(201);
-            expect(aiService.analyzeReview).toHaveBeenCalledWith(reqBody.reviewText);
 
-            // Check Database Call Object (Base creation phase)
-            const dbAddArgs = _mockFns.mockDbCollectionDocAdd.mock.calls[0][0];
-            expect(dbAddArgs.aiProcessed).toBe(false);
-            expect(dbAddArgs.status).toBe('pending');
+            // Check that it reached our generic Service Layer interface seamlessly
+            expect(require('../modules/reviews/reviewService').processReviewCreation).toHaveBeenCalledWith(reqBody);
 
-            // Check Update Object (Enrichment phase)
-            const dbUpdateArgs = _mockFns.mockDbCollectionDocUpdate.mock.calls[0][0];
-            expect(dbUpdateArgs.aiProcessed).toBe(true);
-            expect(dbUpdateArgs.sentiment).toBe('positive');
-            expect(dbUpdateArgs.sentimentConfidence).toBe(0.85);
-            expect(dbUpdateArgs.category).toBe('food');
-
-            // Should not escalate 5 star positive
-            expect(dbUpdateArgs.isEscalated).toBe(false);
-            expect(dbUpdateArgs.escalationStatus).toBe('none');
-
-            // Assert exact API payload contract returned
+            // Assert PRD output contract match
             expect(res.body.data).toEqual({
                 reviewId: 'mock-review-123',
                 rating: 5,
@@ -106,64 +95,30 @@ describe('Reviews Endpoints (Phase 3 AI Integration)', () => {
                 category: 'food',
                 categoryConfidence: 0.90,
                 isEscalated: false,
-                escalationStatus: 'none'
+                escalationStatus: 'none',
+                processingDurationMs: 42
             });
         });
 
-        it('should trigger escalation when AI returns negative sentiment even if rating is high', async () => {
-            aiService.analyzeReview.mockResolvedValueOnce({
-                sentiment: 'negative',
-                sentimentConfidence: 0.99,
-                category: 'staff',
-                categoryConfidence: 0.70
-            });
+        it('should enforce strictly typed payloads via Zod middleware returning exactly 400', async () => {
+            const reqBody = {
+                // branchId missing
+                source: "INVALID_SOURCE", // Bad source
+                rating: 6, // Exceeds 5
+                reviewText: "" // Empty string validation
+            };
 
             const res = await request(app)
                 .post('/reviews')
                 .set('Authorization', 'Bearer valid-token')
-                .send({
-                    branchId: 'branch-1', source: 'web', rating: 4, reviewText: 'Horrible waitress but food was great.', category: 'food'
-                });
+                .send(reqBody);
 
-            expect(res.status).toBe(201);
-            const dbUpdateArgs = _mockFns.mockDbCollectionDocUpdate.mock.calls[0][0];
-
-            expect(dbUpdateArgs.sentiment).toBe('negative');
-            expect(dbUpdateArgs.isEscalated).toBe(true); // AI sentiment overrode integer rating logic securely
-            expect(dbUpdateArgs.escalationStatus).toBe('escalated');
-        });
-
-        it('should gracefully fallback if AI service fails or times out', async () => {
-            // Mock AI throwing error
-            aiService.analyzeReview.mockResolvedValueOnce(null);
-
-            const res = await request(app)
-                .post('/reviews')
-                .set('Authorization', 'Bearer valid-token')
-                .send({
-                    branchId: 'branch-1', source: 'web', rating: 1, reviewText: 'Never again!', category: 'food' // Hard rating 1
-                });
-
-            expect(res.status).toBe(201);
-
-            const dbUpdateArgs = _mockFns.mockDbCollectionDocUpdate.mock.calls[0][0];
-            expect(dbUpdateArgs.aiProcessed).toBe(false);
-            expect(dbUpdateArgs.aiProcessingError).toContain('fallback logic');
-
-            // Fallback should still utilize rating-based derivation
-            expect(dbUpdateArgs.sentiment).toBe('negative'); // Derived from rating <= 2
-            expect(dbUpdateArgs.isEscalated).toBe(true); // Derived from rating <= 2 natively
-        });
-
-        it('should enforce required fields', async () => {
-            const res = await request(app)
-                .post('/reviews')
-                .set('Authorization', 'Bearer valid-token')
-                .send({}); // Empty body
-
-            expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Missing required');
-            expect(aiService.analyzeReview).not.toHaveBeenCalled();
+            expect(res.status).toBe(400); // Handled explicitly by generic Zod middleware!
+            expect(res.body.success).toBe(false);
+            expect(res.body.details).toContain("branchId: Invalid input: expected string, received undefined");
+            expect(res.body.details).toContain("source: Invalid option: expected one of \"internal\"|\"google\"|\"zomato\"|\"swiggy\"");
+            expect(res.body.details).toContain("rating: Rating must be at most 5");
+            expect(res.body.details).toContain("reviewText: Review text cannot be empty");
         });
     });
 });

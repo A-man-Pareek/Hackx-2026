@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { authenticate } = require('./authMiddleware');
-const { authorizeRoles } = require('./roleMiddleware');
+const { authenticate, authorizeRoles } = require('./authMiddleware');
 const authController = require('./authController');
 
 /**
@@ -13,7 +12,7 @@ const authController = require('./authController');
 router.post(
     '/register',
     authenticate,
-    authorizeRoles(['admin']),
+    authorizeRoles('admin'),
     authController.register
 );
 
@@ -36,7 +35,7 @@ router.get(
 router.patch(
     '/deactivate/:uid',
     authenticate,
-    authorizeRoles(['admin']),
+    authorizeRoles('admin'),
     authController.deactivate
 );
 

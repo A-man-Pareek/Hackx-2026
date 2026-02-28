@@ -17,15 +17,23 @@ jest.mock('../config/firebase', () => {
     }));
 
     const mockAuthVerifyIdToken = jest.fn();
+    const mockAuthCreateUser = jest.fn();
+    const mockAuthUpdateUser = jest.fn();
 
     return {
         admin: {
-            auth: () => ({ verifyIdToken: mockAuthVerifyIdToken })
+            auth: () => ({
+                verifyIdToken: mockAuthVerifyIdToken
+            })
+        },
+        adminAuth: {
+            createUser: mockAuthCreateUser,
+            updateUser: mockAuthUpdateUser
         },
         db: {
             collection: mockDbCollection
         },
-        _mockFns: { mockAuthVerifyIdToken, mockDbCollectionDocGet, mockDbCollectionDocSet, mockDbCollectionDocUpdate }
+        _mockFns: { mockAuthVerifyIdToken, mockAuthCreateUser, mockAuthUpdateUser, mockDbCollectionDocGet, mockDbCollectionDocSet, mockDbCollectionDocUpdate }
     };
 });
 
@@ -115,31 +123,29 @@ describe('Auth Endpoints', () => {
                 .post('/auth/register')
                 .set('Authorization', 'Bearer caller-token')
                 .send({
-                    uid: 'new-uid',
                     name: 'New',
                     email: 'new@test.com',
+                    password: 'password123',
                     role: 'staff',
                     branchId: 'b1'
                 });
 
             expect(res.status).toBe(403);
-            expect(res.body.error).toContain('Insufficient permissions');
+            expect(res.body.error).toContain('Forbidden: Requires one of roles: admin');
         });
 
         it('should allow admin creating admin', async () => {
             setupMockCaller('admin'); // First get is for middleware
 
-            _mockFns.mockDbCollectionDocGet.mockImplementationOnce(() => Promise.resolve({
-                exists: false
-            }));
+            _mockFns.mockAuthCreateUser.mockResolvedValueOnce({ uid: 'mock-created-uid' });
 
             const res = await request(app)
                 .post('/auth/register')
                 .set('Authorization', 'Bearer caller-token')
                 .send({
-                    uid: 'new-uid',
                     name: 'New',
                     email: 'new@test.com',
+                    password: 'password123',
                     role: 'admin' // In new schema, admin can create anyone
                 });
 
@@ -148,17 +154,16 @@ describe('Auth Endpoints', () => {
 
         it('should allow admin creating staff', async () => {
             setupMockCaller('admin');
-            _mockFns.mockDbCollectionDocGet.mockImplementationOnce(() => Promise.resolve({
-                exists: false // Target user doc doesn't exist
-            }));
+
+            _mockFns.mockAuthCreateUser.mockResolvedValueOnce({ uid: 'mock-created-uid' });
 
             const res = await request(app)
                 .post('/auth/register')
                 .set('Authorization', 'Bearer caller-token')
                 .send({
-                    uid: 'new-uid',
                     name: 'New',
                     email: 'new@test.com',
+                    password: 'password123',
                     role: 'staff',
                     branchId: 'b1'
                 });
@@ -174,9 +179,9 @@ describe('Auth Endpoints', () => {
                 .post('/auth/register')
                 .set('Authorization', 'Bearer caller-token')
                 .send({
-                    uid: 'new-uid',
                     name: 'New',
                     email: 'new@test.com',
+                    password: 'password123',
                     role: 'staff' // missing branchId
                 });
 
@@ -190,9 +195,9 @@ describe('Auth Endpoints', () => {
                 .post('/auth/register')
                 .set('Authorization', 'Bearer caller-token')
                 .send({
-                    uid: 'new-uid',
                     name: 'New',
                     email: 'InvalidEmailFormat',
+                    password: 'password123',
                     role: 'staff',
                     branchId: 'b1'
                 });
@@ -231,7 +236,7 @@ describe('Auth Endpoints', () => {
                 .set('Authorization', 'Bearer caller-token');
 
             expect(res.status).toBe(403);
-            expect(res.body.error).toContain('Insufficient permissions');
+            expect(res.body.error).toContain('Forbidden: Requires one of roles: admin');
         });
 
         it('should allow admin deactivating staff', async () => {
@@ -249,6 +254,7 @@ describe('Auth Endpoints', () => {
                 .set('Authorization', 'Bearer caller-token');
 
             expect(res.status).toBe(200);
+            expect(_mockFns.mockAuthUpdateUser).toHaveBeenCalledWith('staff-uid', { disabled: true });
             expect(_mockFns.mockDbCollectionDocUpdate).toHaveBeenCalledWith({ isActive: false });
         });
     });
