@@ -3,6 +3,11 @@ const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 const axios = require('axios');
+const http = require('http');
+
+// Phase 9 Automations
+const { initSockets } = require('./sockets/socketHandler');
+const { startSyncJob } = require('./jobs/syncJob');
 
 // Require routes from the incoming modular backend
 const authRoutes = require('./modules/auth/authRoutes');
@@ -11,6 +16,8 @@ const staffRoutes = require('./modules/staff/staffRoutes');
 const reviewRoutes = require('./modules/reviews/reviewRoutes');
 const responseRoutes = require('./modules/responses/responseRoutes');
 const analyticsRoutes = require('./modules/analytics/analyticsRoutes'); // NEW Analytics routes
+const aiRoutes = require('./modules/ai/aiRoutes');
+const templateRoutes = require('./modules/templates/templateRoutes');
 
 const app = express();
 
@@ -29,6 +36,8 @@ app.use('/staff', staffRoutes);
 app.use('/reviews', reviewRoutes);
 app.use('/responses', responseRoutes);
 app.use('/api/analytics', analyticsRoutes); // NEW Analytics routes
+app.use('/api/ai', aiRoutes);
+app.use('/api/templates', templateRoutes);
 
 // ---------------------------------------------------------------------------
 // Route: /api/sync-reviews
@@ -273,9 +282,15 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 8000;
 
+// Phase 9: Wrap Express inside HTTP Server for Socket.io
+const server = http.createServer(app);
+initSockets(server);
+
 if (require.main === module) {
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
+        // Phase 9: Initialize background automation tasks
+        startSyncJob();
     });
 }
 

@@ -8,7 +8,7 @@ const reviewController = require('./reviewController');
 
 // Validation Layer Hook
 const validateRequest = require('../../middleware/validateRequest');
-const { createReviewSchema } = require('./reviewSchemas');
+const { createReviewSchema, updateCategorySchema } = require('./reviewSchemas');
 
 /**
  * @route   GET /reviews
@@ -31,6 +31,18 @@ router.post(
     authenticate,
     validateRequest(createReviewSchema), // Phase 5.5: Validate Payload Structurally
     reviewController.createReview
+);
+
+/**
+ * @route   PATCH /reviews/:id/category
+ * @desc    Override AI categorization manually
+ * @access  Private (Branch Manager/Admin check inside controller)
+ */
+router.patch(
+    '/:id/category',
+    authenticate,
+    validateRequest(updateCategorySchema),
+    reviewController.updateCategory
 );
 
 module.exports = router;

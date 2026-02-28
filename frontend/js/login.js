@@ -122,7 +122,7 @@ signInForm.addEventListener('submit', async (e) => {
 
         // Final UI Redirect
         alert("Logged in successfully! Let's get to work.");
-        // window.location.href = '/frontend/html/dashboard.html'; // TBD next Phase
+        window.location.href = '../html/dashboard.html';
     } catch (error) {
         alert(`Firebase Access Denied: ${error.message}`);
     }

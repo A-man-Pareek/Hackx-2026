@@ -1,6 +1,7 @@
 const NodeCache = require('node-cache');
 const { db } = require('../../config/firebase');
 const logger = require('../../config/logger');
+const aiService = require('../ai/aiService');
 
 // 60 Second Memory Cache for Analytics endpoints as requested in Phase 5.5
 const analyticsCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
@@ -322,6 +323,142 @@ class AnalyticsService {
         };
     }
 
+    /**
+     * Phase 8 (PRD): Business Intelligence Dashboard Engine
+     */
+    static async getDashboardData(branchId, userRole, timeframeDays = 30) {
+        // We can reuse or rebuild queries
+        const pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - parseInt(timeframeDays));
+
+        const result = {
+            sentiment: { positive: 0, neutral: 0, negative: 0 },
+            branchComparison: [], // populated if admin
+            staffPerformance: [],
+            monthlyTrend: []
+        };
+
+        // 1. Sentiment & Staff & Monthly Trend
+        const reviewsSnap = await db.collection('reviews')
+            .where('branchId', '==', branchId)
+            .where('isDeleted', '==', false)
+            .get();
+
+        const staffMap = {};
+        const weeklyBuckets = {};
+
+        reviewsSnap.forEach(doc => {
+            const data = doc.data();
+            const createdAt = data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date();
+
+            if (createdAt >= pastDate) {
+                // Sentiment
+                if (data.sentiment === 'positive') result.sentiment.positive++;
+                else if (data.sentiment === 'negative') result.sentiment.negative++;
+                else result.sentiment.neutral++;
+
+                // Trend (by week)
+                // Using simple ISO week mapping or start of week date
+                const startOfWeek = new Date(createdAt);
+                startOfWeek.setDate(createdAt.getDate() - createdAt.getDay());
+                const weekKey = startOfWeek.toISOString().split('T')[0];
+
+                if (!weeklyBuckets[weekKey]) {
+                    weeklyBuckets[weekKey] = { ratingSum: 0, count: 0 };
+                }
+                weeklyBuckets[weekKey].ratingSum += (data.rating || 0);
+                weeklyBuckets[weekKey].count++;
+            }
+
+            // Staff Performance (all time or timeframe?) 
+            // The PRD doesn't specify strictly timeframe for staff, but let's assume all time mapped to reviews handled
+            // Wait, "Group reviews by assignedStaffId"
+            if (data.staffTagged) {
+                if (!staffMap[data.staffTagged]) {
+                    staffMap[data.staffTagged] = { count: 0, responseTimeSum: 0, responses: 0 };
+                }
+                staffMap[data.staffTagged].count++;
+                if (data.responseStatus === 'responded' && data.responseTimeMinutes !== undefined) {
+                    staffMap[data.staffTagged].responses++;
+                    staffMap[data.staffTagged].responseTimeSum += data.responseTimeMinutes;
+                }
+            }
+        });
+
+        result.monthlyTrend = Object.keys(weeklyBuckets).sort().map(week => ({
+            date: week,
+            avgRating: Number((weeklyBuckets[week].ratingSum / weeklyBuckets[week].count).toFixed(1))
+        }));
+
+        result.staffPerformance = Object.keys(staffMap).map(staffId => ({
+            staffId,
+            reviewsHandled: staffMap[staffId].count,
+            avgResponseTime: staffMap[staffId].responses > 0 ? Math.floor(staffMap[staffId].responseTimeSum / staffMap[staffId].responses) : 0
+        }));
+
+        // 2. Branch-wise comparison if admin
+        if (userRole === 'admin') {
+            const allBranchesSnap = await db.collection('reviews').where('isDeleted', '==', false).get();
+            const branchMap = {};
+
+            allBranchesSnap.forEach(doc => {
+                const data = doc.data();
+                if (!branchMap[data.branchId]) {
+                    branchMap[data.branchId] = { ratingSum: 0, count: 0 };
+                }
+                branchMap[data.branchId].ratingSum += (data.rating || 0);
+                branchMap[data.branchId].count++;
+            });
+
+            result.branchComparison = Object.keys(branchMap).map(bId => ({
+                branchId: bId,
+                avgRating: Number((branchMap[bId].ratingSum / branchMap[bId].count).toFixed(1))
+            }));
+        }
+
+        return result;
+    }
+
+    /**
+     * Phase 8 (PRD): Deep Sentiment Insights
+     */
+    static async generateDeepInsights(branchId) {
+        const cacheKey = `insights_${branchId}`;
+        const cached = analyticsCache.get(cacheKey);
+
+        if (cached) {
+            logger.info(`[ANALYTICS] Insights Cache HIT for branch: ${branchId}`);
+            return cached;
+        }
+
+        const snapshot = await db.collection('reviews')
+            .where('branchId', '==', branchId)
+            .where('sentiment', 'in', ['negative', 'neutral'])
+            .where('isDeleted', '==', false)
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
+
+        if (snapshot.empty) {
+            return "No negative or neutral reviews recently to generate insights from.";
+        }
+
+        const textArray = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.reviewText) textArray.push(data.reviewText);
+        });
+
+        const summary = await aiService.generateInsights(textArray);
+
+        if (summary) {
+            // cache for 24 hours (86400 seconds)
+            analyticsCache.set(cacheKey, summary, 86400);
+            return summary;
+        } else {
+            return "Failed to generate AI insights.";
+        }
+    }
 }
 
 module.exports = AnalyticsService;

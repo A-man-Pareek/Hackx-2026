@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { getReviewAnalysisPrompt } = require('./promptTemplates');
+const { getReviewAnalysisPrompt, getSuggestReplyPrompt, getDeepInsightsPrompt } = require('./promptTemplates');
 
 // Lazy initialize Gemini client to ensure safety around missing env vars
 let genAI = null;
@@ -67,6 +67,47 @@ const analyzeReview = async (reviewText) => {
     }
 };
 
+const suggestReply = async (reviewText, rating) => {
+    if (!process.env.GEMINI_API_KEY) return null;
+    try {
+        const client = getGenAIClient();
+        const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const promptConfig = getSuggestReplyPrompt(reviewText, rating);
+
+        const responseResult = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: promptConfig.prompt }] }],
+            generationConfig: { temperature: promptConfig.temperature }
+        });
+
+        return responseResult.response.text();
+    } catch (error) {
+        console.error('AI Reply Suggestion Error:', error.message);
+        return null;
+    }
+};
+
+const generateInsights = async (reviewsTextArray) => {
+    if (!process.env.GEMINI_API_KEY) return null;
+    if (reviewsTextArray.length === 0) return "No sufficient data to generate insights.";
+    try {
+        const client = getGenAIClient();
+        const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const promptConfig = getDeepInsightsPrompt(reviewsTextArray);
+
+        const responseResult = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: promptConfig.prompt }] }],
+            generationConfig: { temperature: promptConfig.temperature }
+        });
+
+        return responseResult.response.text();
+    } catch (error) {
+        console.error('AI Insights Generation Error:', error.message);
+        return null;
+    }
+};
+
 module.exports = {
-    analyzeReview
+    analyzeReview,
+    suggestReply,
+    generateInsights
 };

@@ -16,6 +16,13 @@ const createReviewSchema = z.object({
     category: z.string().optional() // Allow optional initially, AI will override
 });
 
+const updateCategorySchema = z.object({
+    category: z.enum(['Food', 'Service', 'Ambiance', 'Cleanliness', 'Price'], {
+        errorMap: () => ({ message: "Category must be one of: Food, Service, Ambiance, Cleanliness, Price" })
+    })
+});
+
 module.exports = {
-    createReviewSchema
+    createReviewSchema,
+    updateCategorySchema
 };

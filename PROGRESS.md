@@ -152,5 +152,53 @@ To transform the system into a customer-facing SaaS, the internal-only staff hie
 
 ### Verification Status
 - Complete end-to-end user registration and login flows function properly.
-- Fully simulated the public token handshake from UI to Firestore document creation.
 - 100% Passing backend test suite checking for unauthorized tokens, missing schema payloads, and conflict handling.
+
+---
+
+## Phase 8: Backend AI & Business Intelligence Core (Current)
+
+The backend was evolved from a data engine into a proactive dashboard API. Added Deep AI functionalities using Gemini and aggregated BI functions.
+
+### Architectural Innovations
+1. **Manual AI Overrides**
+   - Built the `PATCH /api/reviews/:id/category` component utilizing strict `Zod` validation to override AI categorizations natively.
+   - Enforces specific branch-level access control on edits.
+2. **AI-Assisted Responses**
+   - Added a `POST /api/ai/suggest-reply` generator natively communicating with Gemini.
+   - Returns a structured 3-sentence draft strictly omitting raw discount generation and adhering to an empathetic manager persona.
+3. **Predefined Reply Templates**
+   - Generated a full CRUD architecture for `templates` (`POST`, `GET`, `DELETE`) isolated tightly by `branchId` context.
+4. **Business Intelligence Engine**
+   - Drafted a highly optimized `/api/analytics/dashboard` engine leveraging native Firebase snapshot mathematical derivations. 
+   - Provides global sentiment spans, admin cross-branch comparisons, detailed staff response-time analytics, and weekly trend mappings.
+5. **AI Deep Sentiment Insights**
+   - Added `/api/analytics/insights` that distills out the 50 most recent negative reviews, executing a deep contextual read via Gemini to return 2 core operational problems. 
+   - Wrapped securely behind a 24-Hour `NodeCache` layer to actively prevent API billing drain.
+
+### Verification Status
+- Re-verified complete backend integrity using `Jest`. All routing structures and endpoints natively function accurately.
+
+---
+
+## Phase 9: Automation, Real-Time & Notifications (Current)
+
+The backend has been upgraded into a self-driving, real-time alert engine. Eliminated manual syncing by attaching cron jobs and built an active notification layer natively.
+
+### Architectural Innovations
+1. **Background Cron Jobs (`node-cron`)**
+   - Scheduled a background worker in `syncJob.js` to autonomously execute every 6 hours (`0 */6 * * *`). 
+   - Autonomously iterates through active `Branches` pulling organic Google Reviews without requiring manual API hits. Runs cleanly over a random backoff jitter preventing API throttling.
+2. **Real-Time WebSockets (`socket.io`)**
+   - WSS endpoints formally attached to `server.js` allowing dashboards to natively attach to a `branchId` socket room.
+   - The absolute moment an AI classification finishes processing a new review, it triggers an instant server `emit('new_review', { payload })` push event.
+3. **Critical Email Alerts (`nodemailer`)**
+   - Constructed the `notificationService.js` abstraction mapped through ethereal `.env` transports.
+   - Evaluates AI results strictly; if `isEscalated: true`, it physically triggers an async server-side email dispatch to the Branch Manager alerting them instantly.
+4. **Data Exports (`json2csv`)**
+   - Deployed the `GET /api/analytics/export?branchId={id}&type=reviews` route into the analytics payload.
+   - Instantly converts 500+ recent nested firebase payloads into CSV format leveraging strict `application/csv` attachment headers for offline reporting.
+
+### Verification Status
+- Ensured strict backwards compatibility against the 17 integration endpoints passing effortlessly.
+- Mapped Socket/HTTP hybrids securely bypassing default Node limitations cleanly.

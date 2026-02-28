@@ -5,6 +5,22 @@ const getReviewAnalysisPrompt = (reviewText) => {
     };
 };
 
+const getSuggestReplyPrompt = (reviewText, rating) => {
+    return {
+        prompt: `Act as a professional restaurant manager. Write a brief, empathetic response to the following customer review. Do not offer discounts unless explicitly instructed. Keep it under 3 sentences.\n\nRating: ${rating} Stars\nReview Text: "${reviewText}"`,
+        temperature: 0.7, // Higher temp for more natural text
+    };
+};
+
+const getDeepInsightsPrompt = (reviewsTextArray) => {
+    return {
+        prompt: `Analyze these recent complaints and summarize the 2 biggest recurring problems in exactly two sentences.\n\nReviews:\n${reviewsTextArray.join('\n')}`,
+        temperature: 0.3,
+    };
+};
+
 module.exports = {
-    getReviewAnalysisPrompt
+    getReviewAnalysisPrompt,
+    getSuggestReplyPrompt,
+    getDeepInsightsPrompt
 };

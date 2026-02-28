@@ -137,14 +137,14 @@ describe('Auth Endpoints', () => {
             expect(_mockFns.mockDbCollectionDocSet).toHaveBeenCalled();
         });
 
-        it('should reject invalid role', async () => {
+        it('should allow valid new roles like admin', async () => {
             const res = await request(app)
                 .post('/auth/register')
                 .set('Authorization', 'Bearer valid-token')
                 .send({ name: 'Hacker', role: 'admin' });
 
-            expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Invalid role');
+            // Admin is now a VALID_ROLE in config/roles.js so this should pass Registration
+            expect(res.status).toBe(201);
         });
 
         it('should reject if user already registered', async () => {

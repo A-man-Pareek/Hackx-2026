@@ -4,7 +4,10 @@
  */
 const VALID_ROLES = [
     'customer',
-    'restaurant_owner'
+    'restaurant_owner',
+    'admin',
+    'branch_manager',
+    'staff'
 ];
 
 module.exports = VALID_ROLES;
