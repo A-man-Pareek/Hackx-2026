@@ -8,6 +8,7 @@ export interface Branch {
     name: string;
     location: string;
     managerId: string;
+    placeId: string;               // NEW: Google Places ID
     status: 'active' | 'inactive';
     totalReviews: number;          // Default: 0
     averageRating: number;         // Default: 0
@@ -38,15 +39,19 @@ export interface Staff {
 export interface Review {
     branchId: string;              // Refers to a Branch document ID
     source: 'internal' | 'google' | 'zomato';
+    externalReviewId?: string;     // NEW: Unique ID for duplicate prevention
+    authorName: string;            // NEW: Review author
     rating: number;                // 1-5 scale
     reviewText: string;
-    sentiment: 'positive' | 'neutral' | 'negative';
+    sentiment: 'pending' | 'positive' | 'neutral' | 'negative';
     sentimentScore: number;        // 0-1 AI score
-    category: 'Food' | 'Service' | 'Staff' | 'Ambience' | 'Cleanliness';
+    category: 'pending' | 'Food' | 'Service' | 'Staff' | 'Ambience' | 'Cleanliness';
     tags?: string[];               // Optional keywords
     staffTagged?: string;          // Refers to a Staff document ID (Optional)
     status: 'normal' | 'critical' | 'escalated'; // If rating <= 2 or sentiment == negative -> 'critical'
     responseStatus: 'pending' | 'responded'; // Defaults to 'pending'
+    externalTimestamp?: number;    // NEW: Google review time
+    syncedAt?: Timestamp;          // NEW: Google sync time
     createdAt: Timestamp;
 }
 
@@ -69,7 +74,9 @@ export interface Response {
 // ----------------------------------------------------------------------------
 export interface User {
     name: string;
+    email: string;                 // NEW
     role: 'admin' | 'branch_manager' | 'staff';
-    branchId: string;              // Refers to a Branch document ID
+    branchId?: string;             // Refers to a Branch document ID (Null for admins)
+    isActive: boolean;             // NEW
     createdAt: Timestamp;
 }

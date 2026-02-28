@@ -147,21 +147,23 @@
                 const spiceLoungeRef = doc(collection(db, "branches"));
 
                 await setDoc(curryHouseRef, {
-                    name: "The Curry House",
-                    location: "Mumbai South",
+                    name: "Leopold Cafe",
+                    location: "Colaba, Mumbai",
                     managerId: "demo_admin_001",
+                    placeId: "ChIJe2b3dxfP5zsRbUwb8iWlmbg", // Real-ish Place ID
                     status: "active",
                     totalReviews: 3,
-                    averageRating: 2.6,
+                    averageRating: 3.3,
                     positiveReviews: 1,
                     negativeReviews: 2,
                     createdAt: serverTimestamp()
                 });
 
                 await setDoc(spiceLoungeRef, {
-                    name: "Spice Lounge",
-                    location: "Bandra West",
+                    name: "Britannia & Co.",
+                    location: "Ballard Estate, Mumbai",
                     managerId: "demo_admin_002",
+                    placeId: "ChIJpw5p5hXP5zsRH1E2O2Y0NqI", // Real-ish Place ID
                     status: "active",
                     totalReviews: 2,
                     averageRating: 4.5,
@@ -186,39 +188,44 @@
                     await setDoc(staff.id, staff.data);
                 }
 
-                // 3. Create 5 Sample Reviews
+                // 3. Create 5 Sample Reviews (Matching v1.0 PRD schema)
                 log("Creating 5 sample reviews (Positive, Negative, Critical)...");
 
-                const review1 = doc(collection(db, "reviews")); // Positive
-                const review2 = doc(collection(db, "reviews")); // Negative
-                const review3 = doc(collection(db, "reviews")); // Critical
-                const review4 = doc(collection(db, "reviews")); // Positive
-                const review5 = doc(collection(db, "reviews")); // Neutral/Negative
+                const review1 = doc(collection(db, "reviews")); // Positive (Google)
+                const review2 = doc(collection(db, "reviews")); // Negative (Zomato)
+                const review3 = doc(collection(db, "reviews")); // Critical (Internal)
+                const review4 = doc(collection(db, "reviews")); // Positive (Google)
+                const review5 = doc(collection(db, "reviews")); // Neutral/Negative (Google)
 
                 await setDoc(review1, {
                     branchId: spiceLoungeRef.id,
                     source: "google",
+                    authorName: "Rohan Desai",
+                    externalReviewId: `Rohan Desai_${new Date().getTime() - 86400000}`,
+                    externalTimestamp: new Date().getTime() - 86400000,
                     rating: 5,
-                    reviewText: "Amazing food and Neha was a fantastic server!",
+                    reviewText: "The Berry Pulao is legendary for a reason! Absolutely delicious. The vintage decor and the charming owner making rounds to the tables makes it a memorable experience.",
                     sentiment: "positive",
                     sentimentScore: 0.95,
-                    category: "Service",
-                    tags: ["amazing food", "fantastic server"],
+                    category: "Food",
+                    tags: ["berry pulao", "vintage decor"],
                     staffTagged: staffList[3].id.id, // Neha D.
                     status: "normal",
                     responseStatus: "pending",
+                    syncedAt: serverTimestamp(),
                     createdAt: serverTimestamp()
                 });
 
                 await setDoc(review2, {
                     branchId: curryHouseRef.id,
                     source: "zomato",
+                    authorName: "Priya Sharma",
                     rating: 3,
-                    reviewText: "Food was alright but the wait was a bit long.",
+                    reviewText: "Great vibe and historical significance, but overhyped. Had to wait 45 minutes for a table. The Kheema Pav was decent.",
                     sentiment: "negative",
                     sentimentScore: 0.45,
                     category: "Service",
-                    tags: ["long wait", "alright food"],
+                    tags: ["long wait", "overhyped"],
                     staffTagged: staffList[0].id.id, // Rahul S.
                     status: "normal",
                     responseStatus: "pending",
@@ -228,12 +235,13 @@
                 await setDoc(review3, {
                     branchId: curryHouseRef.id,
                     source: "internal",
+                    authorName: "Amit Patel",
                     rating: 1,
-                    reviewText: "Terrible experience. The soup was cold and Rahul was incredibly rude to us when we complained. Needs immediate attention!",
+                    reviewText: "Very disappointing. The place was noisy, the food took an hour, and Rahul our waiter was incredibly rude when we asked for water.",
                     sentiment: "negative",
                     sentimentScore: 0.12,
                     category: "Staff",
-                    tags: ["cold soup", "rude staff", "terrible experience"],
+                    tags: ["rude waiter", "noisy", "slow"],
                     staffTagged: staffList[0].id.id, // Rahul S.
                     status: "critical", // Match business logic: rating <= 2
                     responseStatus: "responded",
@@ -243,30 +251,38 @@
                 await setDoc(review4, {
                     branchId: spiceLoungeRef.id,
                     source: "google",
+                    authorName: "Kabir Khan",
+                    externalReviewId: `Kabir Khan_${new Date().getTime() - 172800000}`,
+                    externalTimestamp: new Date().getTime() - 172800000,
                     rating: 4,
-                    reviewText: "Good ambience, very welcoming host Vikram.",
+                    reviewText: "Classic Parsi food. The Sali Boti and Caramel Custard were phenomenal. Portions are generous.",
                     sentiment: "positive",
                     sentimentScore: 0.82,
-                    category: "Ambience",
-                    tags: ["good ambience", "welcoming host"],
+                    category: "Food",
+                    tags: ["parsi food", "sali boti"],
                     staffTagged: staffList[4].id.id, // Vikram
                     status: "normal",
                     responseStatus: "pending",
+                    syncedAt: serverTimestamp(),
                     createdAt: serverTimestamp()
                 });
 
                 await setDoc(review5, {
                     branchId: curryHouseRef.id,
                     source: "google",
+                    authorName: "Sarah Walker",
+                    externalReviewId: `Sarah Walker_${new Date().getTime() - 259200000}`,
+                    externalTimestamp: new Date().getTime() - 259200000,
                     rating: 4,
-                    reviewText: "Priya the manager handled our large group well.",
+                    reviewText: "A historic place in Colaba! The ambience takes you back in time. Always a good place for a cold beer or chicken stroganoff.",
                     sentiment: "positive",
                     sentimentScore: 0.88,
-                    category: "Service",
-                    tags: ["handled large group well"],
+                    category: "Ambience",
+                    tags: ["historic", "cold beer"],
                     staffTagged: staffList[1].id.id, // Priya
                     status: "normal",
                     responseStatus: "pending",
+                    syncedAt: serverTimestamp(),
                     createdAt: serverTimestamp()
                 });
 
@@ -275,10 +291,20 @@
                 const response1 = doc(collection(db, "responses"));
                 await setDoc(response1, {
                     reviewId: review3.id,
-                    responseText: "Dear Customer, we sincerely apologize for your experience with the cold soup and our staff's behavior. This is unacceptable and we are investigating the matter with Rahul directly. The branch manager will be reaching out to you shortly.",
+                    responseText: "Dear Amit, we sincerely apologize for your experience with the slow service and our staff's behavior. This is unacceptable and we are investigating the matter with Rahul directly. Leopold Cafe values its customers and we will reach out shortly.",
                     autoGenerated: false,
                     respondedBy: "demo_admin_001",
                     respondedAt: serverTimestamp()
+                });
+
+                // 5. Create Mock Test Admin User
+                log("Creating Mock Test Admin User...");
+                await setDoc(doc(db, "users", "demo_admin_001"), {
+                    name: "Admin User",
+                    email: "admin@hackx26.com",
+                    role: "admin",
+                    isActive: true,
+                    createdAt: serverTimestamp()
                 });
 
                 log("✅ SEEDING COMPLETE! You can close this page and check your Firebase Console.", "success");

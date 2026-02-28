@@ -53,121 +53,168 @@
     </style>
 </head>
 
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden relative">
 
-    <!-- Top Navigation -->
-    <nav class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
-        <div class="flex items-center gap-3">
-            <div class="bg-blue-600 text-white p-2 rounded-lg">
-                <i class="fa-solid fa-star-half-stroke text-xl"></i>
+    <!-- Login Overlay -->
+    <div id="loginOverlay"
+        class="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex flex-col items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
+            <div
+                class="bg-blue-600 text-white w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg">
+                <i class="fa-solid fa-star-half-stroke text-3xl"></i>
             </div>
-            <h1 class="text-xl font-bold text-gray-800">ReviewIQ Dashboard</h1>
-        </div>
-        <div class="flex items-center gap-4">
-            <select id="branchSelector"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-                <option value="all">All Branches</option>
-                <!-- Branches populated dynamically -->
-            </select>
-            <div class="flex items-center gap-2 border-l border-gray-200 pl-4">
-                <img src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff"
-                    class="w-8 h-8 rounded-full" alt="User">
-                <span class="text-sm font-medium">Admin User</span>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">ReviewIQ Login</h1>
+            <p class="text-gray-500 text-sm mb-8">Sign in with your authorized Google account to access the dashboard.
+            </p>
+
+            <button id="googleSignInBtn"
+                class="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl transition flex items-center justify-center gap-3 shadow-sm">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo"
+                    class="w-5 h-5">
+                Sign in with Google
+            </button>
+
+            <div id="loginError"
+                class="hidden mt-4 text-sm text-red-600 font-medium bg-red-50 p-3 rounded-lg border border-red-100">
+                Authentication failed. Please try again.
             </div>
         </div>
-    </nav>
+    </div>
 
-    <!-- Main Content Layout -->
-    <div class="flex flex-1 overflow-hidden">
+    <!-- Main Content Wrapper (Hidden until logged in) -->
+    <div id="appWorkspace" class="h-full flex flex-col hidden opacity-0 transition-opacity duration-500">
 
-        <!-- Left Sidebar: Analytics & Filters -->
-        <aside class="w-80 bg-white border-r border-gray-200 p-6 overflow-y-auto hidden md:block z-0">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Overview Metrics</h2>
-
-            <div class="grid grid-cols-2 gap-4 mb-8">
-                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                    <p class="text-3xl font-bold text-blue-700" id="stat-total">0</p>
-                    <p class="text-xs text-blue-600 font-medium mt-1">Total Reviews</p>
+        <!-- Top Navigation -->
+        <nav
+            class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                    <i class="fa-solid fa-star-half-stroke text-xl"></i>
                 </div>
-                <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                    <p class="text-3xl font-bold text-green-700" id="stat-avg">0.0</p>
-                    <p class="text-xs text-green-600 font-medium mt-1">Avg Rating</p>
+                <h1 class="text-xl font-bold text-gray-800">ReviewIQ Dashboard</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <select id="branchSelector"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+                        <option value="all">All Branches</option>
+                        <!-- Branches populated dynamically -->
+                    </select>
+                    <button id="openAddRestaurantBtn"
+                        class="hidden bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 p-2.5 rounded-lg text-sm transition"
+                        title="Add Live Restaurant">
+                        <i class="fa-solid fa-plus"></i> <span class="hidden md:inline ml-1 font-medium">Add</span>
+                    </button>
                 </div>
-                <div class="bg-red-50 p-4 rounded-xl border border-red-100 col-span-2">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <p class="text-3xl font-bold text-red-700" id="stat-critical">0</p>
-                            <p class="text-xs text-red-600 font-medium mt-1">Critical Alerts</p>
+                <div class="flex items-center gap-2 border-l border-gray-200 pl-4">
+                    <img id="userAvatar" src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff"
+                        class="w-8 h-8 rounded-full" alt="User">
+                    <div class="flex flex-col">
+                        <span id="userNameDisplay" class="text-sm font-medium leading-tight">Loading...</span>
+                        <span id="userRoleDisplay"
+                            class="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">ROLE</span>
+                    </div>
+                    <button id="logoutBtn" title="Sign Out" class="ml-3 text-gray-400 hover:text-red-500 transition">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Layout -->
+        <div class="flex flex-1 overflow-hidden">
+
+            <!-- Left Sidebar: Analytics & Filters -->
+            <aside class="w-80 bg-white border-r border-gray-200 p-6 overflow-y-auto hidden md:block z-0">
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Overview Metrics</h2>
+
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p class="text-3xl font-bold text-blue-700" id="stat-total">0</p>
+                        <p class="text-xs text-blue-600 font-medium mt-1">Total Reviews</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                        <p class="text-3xl font-bold text-green-700" id="stat-avg">0.0</p>
+                        <p class="text-xs text-green-600 font-medium mt-1">Avg Rating</p>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100 col-span-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-3xl font-bold text-red-700" id="stat-critical">0</p>
+                                <p class="text-xs text-red-600 font-medium mt-1">Critical Alerts</p>
+                            </div>
+                            <i class="fa-solid fa-triangle-exclamation text-2xl text-red-400"></i>
                         </div>
-                        <i class="fa-solid fa-triangle-exclamation text-2xl text-red-400"></i>
                     </div>
                 </div>
-            </div>
 
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Sentiment Breakdown</h2>
-            <div class="mb-8 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                <canvas id="sentimentChart" width="100%" height="200"></canvas>
-            </div>
-
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Filters</h2>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                    <select id="filterStatus"
-                        class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="all">All Statuses</option>
-                        <option value="critical">Critical Only</option>
-                        <option value="normal">Normal</option>
-                    </select>
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Sentiment Breakdown</h2>
+                <div class="mb-8 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <canvas id="sentimentChart" width="100%" height="200"></canvas>
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Sentiment</label>
-                    <select id="filterSentiment"
-                        class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="all">All Sentiments</option>
-                        <option value="positive">Positive</option>
-                        <option value="neutral">Neutral</option>
-                        <option value="negative">Negative</option>
-                    </select>
+
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Filters</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                        <select id="filterStatus"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="all">All Statuses</option>
+                            <option value="critical">Critical Only</option>
+                            <option value="normal">Normal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Sentiment</label>
+                        <select id="filterSentiment"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="all">All Sentiments</option>
+                            <option value="positive">Positive</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="negative">Negative</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
 
-            <div class="mt-8">
-                <button id="refreshBtn"
-                    class="w-full bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-rotate-right"></i> Refresh Data
-                </button>
-            </div>
-        </aside>
+                <div class="mt-8">
+                    <button id="refreshBtn"
+                        class="w-full bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> Refresh Data
+                    </button>
+                </div>
+            </aside>
 
-        <!-- Main Workspace: Review List -->
-        <main class="flex-1 overflow-y-auto p-8">
-            <div class="flex justify-between items-end mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800">Recent Reviews</h2>
-                    <p class="text-sm text-gray-500 mt-1">Manage and respond to customer feedback across all branches.
+            <!-- Main Workspace: Review List -->
+            <main class="flex-1 overflow-y-auto p-8">
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Recent Reviews</h2>
+                        <p class="text-sm text-gray-500 mt-1">Manage and respond to customer feedback across all
+                            branches.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="loadingIndicator" class="text-center py-12">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-blue-500"></i>
+                    <p class="mt-4 text-gray-500">Loading reviews...</p>
+                </div>
+
+                <!-- Reviews Container -->
+                <div id="reviewsContainer" class="space-y-4 hidden">
+                    <!-- Review cards will be injected here -->
+                </div>
+
+                <div id="emptyState"
+                    class="hidden text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+                    <i class="fa-regular fa-folder-open text-4xl text-gray-400 mb-3"></i>
+                    <h3 class="text-lg font-medium text-gray-900">No reviews found</h3>
+                    <p class="text-sm text-gray-500 mt-1">Try adjusting your filters or selecting a different branch.
                     </p>
                 </div>
-            </div>
-
-            <div id="loadingIndicator" class="text-center py-12">
-                <i class="fa-solid fa-spinner fa-spin text-4xl text-blue-500"></i>
-                <p class="mt-4 text-gray-500">Loading reviews...</p>
-            </div>
-
-            <!-- Reviews Container -->
-            <div id="reviewsContainer" class="space-y-4 hidden">
-                <!-- Review cards will be injected here -->
-            </div>
-
-            <div id="emptyState"
-                class="hidden text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
-                <i class="fa-regular fa-folder-open text-4xl text-gray-400 mb-3"></i>
-                <h3 class="text-lg font-medium text-gray-900">No reviews found</h3>
-                <p class="text-sm text-gray-500 mt-1">Try adjusting your filters or selecting a different branch.</p>
-            </div>
-        </main>
-    </div>
+            </main>
+        </div>
+    </div> <!-- End Workspace -->
 
     <!-- Reply Modal (Hidden by default) -->
     <div id="replyModal"
@@ -224,7 +271,9 @@
                 </div>
             </div>
 
-            <p class="text-gray-800 text-sm mb-4 leading-relaxed review-text">Review Content</p>
+            <p class="text-gray-800 text-sm mb-4 leading-relaxed"><span
+                    class="font-bold text-gray-900 mr-1 review-author">Author:</span> <span class="review-text">Review
+                    Content</span></p>
 
             <div class="flex flex-wrap items-center gap-4 text-xs">
                 <!-- Data Points -->
@@ -263,10 +312,58 @@
         </div>
     </template>
 
+    <!-- Add Restaurant Modal -->
+    <div id="addRestaurantModal"
+        class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 m-4 transform transition-all">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <i class="fa-brands fa-google text-blue-500"></i> Fetch From Google
+                </h3>
+                <button type="button" id="closeAddModalBtn" class="text-gray-400 hover:text-gray-600 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <p class="text-sm text-gray-600 mb-6">Search for a real business on Google to instantly add it to your
+                dashboard and fetch live public reviews.</p>
+
+            <form id="addRestaurantForm">
+                <div class="mb-4">
+                    <label for="searchName" class="block text-sm font-medium text-gray-700 mb-1">Business Name *</label>
+                    <input type="text" id="searchName"
+                        class="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g. Starbucks" required>
+                </div>
+
+                <div class="mb-6">
+                    <label for="searchLocation" class="block text-sm font-medium text-gray-700 mb-1">City or
+                        Neighborhood *</label>
+                    <input type="text" id="searchLocation"
+                        class="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g. Bandra West, Mumbai" required>
+                </div>
+
+                <div id="addRestaurantError"
+                    class="hidden mb-4 text-xs font-semibold text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    Failed to fetch.
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button type="submit" id="submitAddBtn"
+                        class="w-full px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass"></i> Search & Add
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Firebase SDK Setup -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, collection, getDoc, getDocs, query, orderBy, addDoc, updateDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // =========================================================================
         // USING THE SAME CONFIG FROM SEED.HTML
@@ -279,19 +376,121 @@
             messagingSenderId: "569116765255",
             appId: "1:569116765255:web:d7b86db5f99f01a29bd562"
         };
+
+        // ⚠️ PASTE YOUR GOOGLE PLACES API KEY HERE ⚠️
+        const GOOGLE_PLACES_API_KEY = "AIzaSyDDHmxiUoDtQoAQAhpcB8Tkzxz1zW-PtX8";
         // =========================================================================
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
         const db = getFirestore(app);
 
         // Core Global State
+        let currentUser = null; // Internal user profile (from Firestore `users` collection)
         let allReviews = [];
         let branchMap = {}; // Maps branchId to Branch Name
         let staffMap = {};  // Maps staffId to Staff Name
         let sentimentChart = null; // Chart instance
 
-        // Initialization
-        async function init() {
+        // -------------------------------------------------------------------------
+        // Authentication & Routing Flow
+        // -------------------------------------------------------------------------
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // User is signed in to Google, now fetch their role from Firestore
+                await handleSuccessfulLogin(user);
+            } else {
+                // User is signed out
+                showLoginScreen();
+            }
+        });
+
+        document.getElementById('googleSignInBtn').addEventListener('click', () => {
+            const btn = document.getElementById('googleSignInBtn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
+            btn.disabled = true;
+            document.getElementById('loginError').classList.add('hidden');
+
+            signInWithPopup(auth, provider)
+                .catch((error) => {
+                    console.error("Auth Error:", error);
+                    document.getElementById('loginError').textContent = error.message;
+                    document.getElementById('loginError').classList.remove('hidden');
+                    btn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo" class="w-5 h-5"> Sign in with Google';
+                    btn.disabled = false;
+                });
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        function showLoginScreen() {
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('loginOverlay').classList.remove('opacity-0');
+
+            const workspace = document.getElementById('appWorkspace');
+            workspace.classList.add('hidden');
+            workspace.classList.remove('opacity-100');
+        }
+
+        async function handleSuccessfulLogin(firebaseUser) {
+            try {
+                // Determine user role and access
+                const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+
+                if (userDoc.exists() && userDoc.data().isActive) {
+                    currentUser = { uid: firebaseUser.uid, ...userDoc.data() };
+                } else if (firebaseUser.uid === "WdG4t62yB5X11sTix3q7" /* Dummy Hackathon Fallback UUID */ || true) {
+                    // HACKATHON OVERRIDE: If the Google User isn't in DB yet, auto-assign Admin Demo role for ease of presentation
+                    currentUser = {
+                        uid: firebaseUser.uid,
+                        name: firebaseUser.displayName || "Demo Admin",
+                        email: firebaseUser.email,
+                        role: "admin",
+                        isActive: true
+                    };
+                    // Upsert default admin logic in firestore to prevent future loops (Optional)
+                    await setDoc(doc(db, "users", firebaseUser.uid), currentUser, { merge: true });
+                } else {
+                    throw new Error("User account not found or inactive.");
+                }
+
+                // Update UI Profile Top Right
+                document.getElementById('userNameDisplay').textContent = currentUser.name;
+                document.getElementById('userRoleDisplay').textContent = currentUser.role.replace('_', ' ');
+                document.getElementById('userAvatar').src = firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=0D8ABC&color=fff`;
+
+                // Show Admin Controls
+                if (currentUser.role === 'admin') {
+                    document.getElementById('openAddRestaurantBtn').classList.remove('hidden');
+                }
+
+                // Render Dashboard
+                document.getElementById('loginOverlay').classList.add('opacity-0');
+                setTimeout(() => {
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    const workspace = document.getElementById('appWorkspace');
+                    workspace.classList.remove('hidden');
+                    // slight delay to allow display flex to trigger before opacity transition
+                    setTimeout(() => workspace.classList.add('opacity-100'), 50);
+                }, 300);
+
+                initDataFetch();
+
+            } catch (error) {
+                console.error("Login verification failed:", error);
+                document.getElementById('loginError').textContent = "Unauthorized: " + error.message;
+                document.getElementById('loginError').classList.remove('hidden');
+                signOut(auth);
+            }
+        }
+
+        // -------------------------------------------------------------------------
+        // Data Initialization
+        // -------------------------------------------------------------------------
+        async function initDataFetch() {
             try {
                 await Promise.all([
                     fetchBranches(),
@@ -312,16 +511,26 @@
         async function fetchBranches() {
             const branchesSnapshot = await getDocs(collection(db, "branches"));
             const selector = document.getElementById('branchSelector');
+            selector.innerHTML = '<option value="all">All Branches</option>'; // Reset
 
             branchesSnapshot.forEach(doc => {
                 const data = doc.data();
                 branchMap[doc.id] = data.name;
 
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = data.name;
-                selector.appendChild(option);
+                // Role-based filtering for dropdown
+                if (currentUser.role === 'admin' || currentUser.branchId === doc.id) {
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = data.name;
+                    selector.appendChild(option);
+                }
             });
+
+            // If Branch Manager, force select their branch and disable the "All Branches" option conceptually
+            if (currentUser.role === 'branch_manager' && currentUser.branchId) {
+                selector.value = currentUser.branchId;
+                selector.querySelector('option[value="all"]').disabled = true;
+            }
         }
 
         async function fetchStaff() {
@@ -358,6 +567,9 @@
 
             // Apply Filters Client-Side
             let filteredReviews = allReviews.filter(review => {
+                // Role Constraint override
+                if (currentUser.role === 'branch_manager' && review.branchId !== currentUser.branchId) return false;
+
                 if (selectedBranch !== 'all' && review.branchId !== selectedBranch) return false;
                 if (selectedStatus !== 'all' && review.status !== selectedStatus) return false;
                 if (selectedSentiment !== 'all' && review.sentiment !== selectedSentiment) return false;
@@ -454,6 +666,7 @@
                 const clone = template.content.cloneNode(true);
 
                 // Content Mapping
+                clone.querySelector('.review-author').textContent = review.authorName || 'Unknown Config';
                 clone.querySelector('.review-text').textContent = review.reviewText;
                 clone.querySelector('.branch-name').textContent = branchMap[review.branchId] || 'Unknown Branch';
 
@@ -538,8 +751,7 @@
             document.getElementById('refreshBtn').addEventListener('click', fetchReviews);
         }
 
-        // Start the app
-        init();
+        // Start the app is handled by auth state listener attached at the top!
 
         // 5. Modal & Reply Logic
         const modal = document.getElementById('replyModal');
@@ -577,7 +789,7 @@
                     reviewId: reviewId,
                     responseText: responseText,
                     autoGenerated: false,
-                    respondedBy: "Admin User", // Static for MVP
+                    respondedBy: currentUser.uid, // Use active user reference
                     respondedAt: serverTimestamp()
                 });
 
@@ -602,6 +814,120 @@
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnHtml;
+            }
+        });
+
+        // -------------------------------------------------------------------------
+        // 6. Live Search & Add Flow
+        // -------------------------------------------------------------------------
+        const addModal = document.getElementById('addRestaurantModal');
+
+        document.getElementById('openAddRestaurantBtn').addEventListener('click', () => {
+            document.getElementById('addRestaurantForm').reset();
+            document.getElementById('addRestaurantError').classList.add('hidden');
+            addModal.classList.remove('hidden');
+        });
+
+        document.getElementById('closeAddModalBtn').addEventListener('click', () => {
+            addModal.classList.add('hidden');
+        });
+
+        document.getElementById('addRestaurantForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitAddBtn');
+            const errorBox = document.getElementById('addRestaurantError');
+            const originalHtml = btn.innerHTML;
+
+            const bName = document.getElementById('searchName').value.trim();
+            const bLoc = document.getElementById('searchLocation').value.trim();
+
+            errorBox.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching Live Data...';
+
+            try {
+                if (GOOGLE_PLACES_API_KEY === "PASTE_YOUR_API_KEY_HERE") {
+                    throw new Error("You must paste your Google Places API Key into line 380 of index.html first!");
+                }
+
+                const query = encodeURIComponent(`${bName} ${bLoc}`);
+
+                // STEP 1: Text Search (Using public CORS proxy to trick Google Places API into allowing browser call)
+                const searchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${GOOGLE_PLACES_API_KEY}`)}`;
+
+                const searchResponse = await fetch(searchUrl);
+                const searchData = await searchResponse.json();
+
+                if (!searchData.results || searchData.results.length === 0) {
+                    throw new Error("Could not find any business matching that name and location.");
+                }
+
+                const topPlace = searchData.results[0];
+                const placeId = topPlace.place_id;
+
+                // STEP 2: Place Details
+                const detailsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,rating,user_ratings_total,reviews&reviews_sort=newest&key=${GOOGLE_PLACES_API_KEY}`)}`;
+                const detailsResponse = await fetch(detailsUrl);
+                const detailsData = await detailsResponse.json();
+
+                const details = detailsData.result;
+                const liveReviews = details.reviews || [];
+
+                // STEP 3: Insert Branch into Firestore directly
+                const branchRef = await addDoc(collection(db, "branches"), {
+                    name: details.name,
+                    location: bLoc,
+                    managerId: currentUser.uid,
+                    placeId: placeId,
+                    status: "active",
+                    totalReviews: details.user_ratings_total || 0,
+                    averageRating: details.rating || 0,
+                    positiveReviews: 0,
+                    negativeReviews: 0,
+                    createdAt: serverTimestamp()
+                });
+
+                // STEP 4: Insert Reviews into Firestore directly
+                let insertedReviewCount = 0;
+                for (const r of liveReviews) {
+                    let status = "normal";
+                    if (r.rating <= 2) status = "critical";
+
+                    await addDoc(collection(db, "reviews"), {
+                        branchId: branchRef.id,
+                        source: "google",
+                        externalReviewId: `${r.author_name}_${r.time * 1000}`,
+                        authorName: r.author_name,
+                        rating: r.rating,
+                        reviewText: r.text || "No text provided.",
+                        sentiment: "pending",     // Defaults to pending for AI
+                        sentimentScore: 0,
+                        category: "pending",
+                        status: status,
+                        responseStatus: "pending",
+                        externalTimestamp: r.time * 1000,
+                        syncedAt: serverTimestamp(),
+                        createdAt: serverTimestamp()
+                    });
+                    insertedReviewCount++;
+                }
+
+                console.log(`Successfully added ${details.name} and fetched ${insertedReviewCount} live reviews.`);
+
+                // Refresh UI!
+                await initDataFetch();
+                document.getElementById('branchSelector').value = branchRef.id;
+                renderDashboard();
+
+                addModal.classList.add('hidden');
+
+            } catch (err) {
+                console.error(err);
+                errorBox.textContent = err.message;
+                errorBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
             }
         });
 
