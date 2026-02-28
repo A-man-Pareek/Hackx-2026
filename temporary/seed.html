@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firestore Database Seeder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f9fafb;
+            color: #111827;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #2563eb;
+        }
+
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        button:disabled {
+            background-color: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        pre {
+            background: #f3f4f6;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.875rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .info {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #1e3a8a;
+        }
+
+        .success {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <h1>🚀 Mock Data Seeder</h1>
+        <div class="info">
+            <p><strong>Instructions:</strong></p>
+            <ol>
+                <li>Open this file in your code editor.</li>
+                <li>Replace the <code>firebaseConfig</code> object (around line 50) with your actual Firebase project
+                    config.</li>
+                <li>Ensure your Firestore Rules are set to: <code>allow read, write: if true;</code></li>
+                <li>Click the "Seed Database" button below.</li>
+            </ol>
+        </div>
+
+        <button id="seedBtn">Seed Database Component</button>
+
+        <h3>Log Output:</h3>
+        <pre id="logOutput">Waiting to start...</pre>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // =========================================================================
+        // ⚠️ REPLACE THIS CONFIG WITH YOUR FIREBASE PROJECT CONFIG ⚠️
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBthIwz58nk23yTy8ntgN0T0ATqKUSHZbU",
+            authDomain: "hackx26.firebaseapp.com",
+            projectId: "hackx26",
+            storageBucket: "hackx26.firebasestorage.app",
+            messagingSenderId: "569116765255",
+            appId: "1:569116765255:web:d7b86db5f99f01a29bd562"
+        };
+        // =========================================================================
+
+        const logOutput = document.getElementById('logOutput');
+        const seedBtn = document.getElementById('seedBtn');
+
+        function log(message, type = 'normal') {
+            const span = document.createElement('div');
+            span.className = type;
+            span.textContent = `> ${message}`;
+            logOutput.appendChild(span);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        async function seedDatabase() {
+            if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+                log("❌ ERROR: Please replace firebaseConfig with your actual Firebase project config in the code first!", "error");
+                return;
+            }
+
+            seedBtn.disabled = true;
+            logOutput.innerHTML = '';
+            log("Initializing Firebase...");
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                const db = getFirestore(app);
+
+                // 1. Create Branches
+                log("Creating 2 branches...");
+                const curryHouseRef = doc(collection(db, "branches"));
+                const spiceLoungeRef = doc(collection(db, "branches"));
+
+                await setDoc(curryHouseRef, {
+                    name: "Leopold Cafe",
+                    location: "Colaba, Mumbai",
+                    managerId: "demo_admin_001",
+                    placeId: "ChIJe2b3dxfP5zsRbUwb8iWlmbg", // Real-ish Place ID
+                    status: "active",
+                    totalReviews: 3,
+                    averageRating: 3.3,
+                    positiveReviews: 1,
+                    negativeReviews: 2,
+                    createdAt: serverTimestamp()
+                });
+
+                await setDoc(spiceLoungeRef, {
+                    name: "Britannia & Co.",
+                    location: "Ballard Estate, Mumbai",
+                    managerId: "demo_admin_002",
+                    placeId: "ChIJpw5p5hXP5zsRH1E2O2Y0NqI", // Real-ish Place ID
+                    status: "active",
+                    totalReviews: 2,
+                    averageRating: 4.5,
+                    positiveReviews: 2,
+                    negativeReviews: 0,
+                    createdAt: serverTimestamp()
+                });
+
+                // 2. Create Staff (3 per branch)
+                log("Creating 6 staff members...");
+                const staffList = [
+                    { id: doc(collection(db, "staff")), data: { name: "Rahul S.", branchId: curryHouseRef.id, role: "Waiter", performanceScore: 70, totalReviewsTagged: 2, averageRating: 2.5, createdAt: serverTimestamp() } },
+                    { id: doc(collection(db, "staff")), data: { name: "Priya M.", branchId: curryHouseRef.id, role: "Manager", performanceScore: 85, totalReviewsTagged: 1, averageRating: 4.0, createdAt: serverTimestamp() } },
+                    { id: doc(collection(db, "staff")), data: { name: "Amit K.", branchId: curryHouseRef.id, role: "Chef", performanceScore: 90, totalReviewsTagged: 0, averageRating: 0, createdAt: serverTimestamp() } },
+
+                    { id: doc(collection(db, "staff")), data: { name: "Neha D.", branchId: spiceLoungeRef.id, role: "Waiter", performanceScore: 92, totalReviewsTagged: 1, averageRating: 5.0, createdAt: serverTimestamp() } },
+                    { id: doc(collection(db, "staff")), data: { name: "Vikram R.", branchId: spiceLoungeRef.id, role: "Host", performanceScore: 88, totalReviewsTagged: 1, averageRating: 4.0, createdAt: serverTimestamp() } },
+                    { id: doc(collection(db, "staff")), data: { name: "Suresh B.", branchId: spiceLoungeRef.id, role: "Chef", performanceScore: 95, totalReviewsTagged: 0, averageRating: 0, createdAt: serverTimestamp() } }
+                ];
+
+                for (const staff of staffList) {
+                    await setDoc(staff.id, staff.data);
+                }
+
+                // 3. Create 5 Sample Reviews (Matching v1.0 PRD schema)
+                log("Creating 5 sample reviews (Positive, Negative, Critical)...");
+
+                const review1 = doc(collection(db, "reviews")); // Positive (Google)
+                const review2 = doc(collection(db, "reviews")); // Negative (Zomato)
+                const review3 = doc(collection(db, "reviews")); // Critical (Internal)
+                const review4 = doc(collection(db, "reviews")); // Positive (Google)
+                const review5 = doc(collection(db, "reviews")); // Neutral/Negative (Google)
+
+                await setDoc(review1, {
+                    branchId: spiceLoungeRef.id,
+                    source: "google",
+                    authorName: "Rohan Desai",
+                    externalReviewId: `Rohan Desai_${new Date().getTime() - 86400000}`,
+                    externalTimestamp: new Date().getTime() - 86400000,
+                    rating: 5,
+                    reviewText: "The Berry Pulao is legendary for a reason! Absolutely delicious. The vintage decor and the charming owner making rounds to the tables makes it a memorable experience.",
+                    sentiment: "positive",
+                    sentimentScore: 0.95,
+                    category: "Food",
+                    tags: ["berry pulao", "vintage decor"],
+                    staffTagged: staffList[3].id.id, // Neha D.
+                    status: "normal",
+                    responseStatus: "pending",
+                    syncedAt: serverTimestamp(),
+                    createdAt: serverTimestamp()
+                });
+
+                await setDoc(review2, {
+                    branchId: curryHouseRef.id,
+                    source: "zomato",
+                    authorName: "Priya Sharma",
+                    rating: 3,
+                    reviewText: "Great vibe and historical significance, but overhyped. Had to wait 45 minutes for a table. The Kheema Pav was decent.",
+                    sentiment: "negative",
+                    sentimentScore: 0.45,
+                    category: "Service",
+                    tags: ["long wait", "overhyped"],
+                    staffTagged: staffList[0].id.id, // Rahul S.
+                    status: "normal",
+                    responseStatus: "pending",
+                    createdAt: serverTimestamp()
+                });
+
+                await setDoc(review3, {
+                    branchId: curryHouseRef.id,
+                    source: "internal",
+                    authorName: "Amit Patel",
+                    rating: 1,
+                    reviewText: "Very disappointing. The place was noisy, the food took an hour, and Rahul our waiter was incredibly rude when we asked for water.",
+                    sentiment: "negative",
+                    sentimentScore: 0.12,
+                    category: "Staff",
+                    tags: ["rude waiter", "noisy", "slow"],
+                    staffTagged: staffList[0].id.id, // Rahul S.
+                    status: "critical", // Match business logic: rating <= 2
+                    responseStatus: "responded",
+                    createdAt: serverTimestamp()
+                });
+
+                await setDoc(review4, {
+                    branchId: spiceLoungeRef.id,
+                    source: "google",
+                    authorName: "Kabir Khan",
+                    externalReviewId: `Kabir Khan_${new Date().getTime() - 172800000}`,
+                    externalTimestamp: new Date().getTime() - 172800000,
+                    rating: 4,
+                    reviewText: "Classic Parsi food. The Sali Boti and Caramel Custard were phenomenal. Portions are generous.",
+                    sentiment: "positive",
+                    sentimentScore: 0.82,
+                    category: "Food",
+                    tags: ["parsi food", "sali boti"],
+                    staffTagged: staffList[4].id.id, // Vikram
+                    status: "normal",
+                    responseStatus: "pending",
+                    syncedAt: serverTimestamp(),
+                    createdAt: serverTimestamp()
+                });
+
+                await setDoc(review5, {
+                    branchId: curryHouseRef.id,
+                    source: "google",
+                    authorName: "Sarah Walker",
+                    externalReviewId: `Sarah Walker_${new Date().getTime() - 259200000}`,
+                    externalTimestamp: new Date().getTime() - 259200000,
+                    rating: 4,
+                    reviewText: "A historic place in Colaba! The ambience takes you back in time. Always a good place for a cold beer or chicken stroganoff.",
+                    sentiment: "positive",
+                    sentimentScore: 0.88,
+                    category: "Ambience",
+                    tags: ["historic", "cold beer"],
+                    staffTagged: staffList[1].id.id, // Priya
+                    status: "normal",
+                    responseStatus: "pending",
+                    syncedAt: serverTimestamp(),
+                    createdAt: serverTimestamp()
+                });
+
+                // 4. Create 1 Response
+                log("Creating 1 response for the critical review...");
+                const response1 = doc(collection(db, "responses"));
+                await setDoc(response1, {
+                    reviewId: review3.id,
+                    responseText: "Dear Amit, we sincerely apologize for your experience with the slow service and our staff's behavior. This is unacceptable and we are investigating the matter with Rahul directly. Leopold Cafe values its customers and we will reach out shortly.",
+                    autoGenerated: false,
+                    respondedBy: "demo_admin_001",
+                    respondedAt: serverTimestamp()
+                });
+
+                // 5. Create Mock Test Admin User
+                log("Creating Mock Test Admin User...");
+                await setDoc(doc(db, "users", "demo_admin_001"), {
+                    name: "Admin User",
+                    email: "admin@hackx26.com",
+                    role: "admin",
+                    isActive: true,
+                    createdAt: serverTimestamp()
+                });
+
+                log("✅ SEEDING COMPLETE! You can close this page and check your Firebase Console.", "success");
+
+            } catch (error) {
+                log(`❌ ERROR: ${error.message}`, "error");
+                console.error(error);
+            } finally {
+                seedBtn.disabled = false;
+            }
+        }
+
+        seedBtn.addEventListener('click', seedDatabase);
+    </script>
+
+</body>
+
+</html>

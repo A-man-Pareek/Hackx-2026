@@ -1,0 +1,211 @@
+/* dashboard.css - Modern Dark Theme with Warm Orange Accerts */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap");
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: #0c0a09;
+    /* Deep dark background */
+    color: #f8fafc;
+    /* Tailwind classes handle layout but we define custom variables here */
+    --brand-orange: #f59e0b;
+    --brand-orange-dark: #d97706;
+    --brand-orange-light: #fbbf24;
+    --surface-light: #1c1917;
+    /* Lighter dark for cards */
+    --surface-border: #292524;
+    --text-muted: #a8a29e;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0c0a09;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #44403c;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #57534e;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+
+/* Glass/Solid Cards matching the login form vibe */
+.glass-card {
+    background: var(--surface-light);
+    border: 1px solid var(--surface-border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 0 15px rgba(245, 158, 11, 0.1);
+    transform: translateY(-2px);
+    border-color: #44403c;
+}
+
+/* Form Inputs customized for dark mode */
+input,
+select,
+textarea {
+    background-color: #000 !important;
+    border: 1px solid #44403c !important;
+    color: #fff !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--brand-orange) !important;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3) !important;
+    outline: none !important;
+}
+
+/* Modals Override */
+#replyModal>div,
+#addRestaurantModal>div {
+    background-color: var(--surface-light);
+    border: 1px solid var(--surface-border);
+    color: #fff;
+}
+
+#replyModal h3,
+#addRestaurantModal h3 {
+    color: #fff;
+}
+
+#replyModal label,
+#addRestaurantModal label {
+    color: var(--text-muted);
+}
+
+#modalReviewText {
+    color: #e7e5e4 !important;
+}
+
+#replyModal .bg-gray-50 {
+    background-color: #000 !important;
+    border-color: #292524 !important;
+}
+
+
+/* Custom Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, var(--brand-orange-dark), var(--brand-orange));
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--brand-orange), var(--brand-orange-light));
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid #44403c;
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--text-muted);
+}
+
+/* Navigation Overrides for Dark Mode */
+.nav-item {
+    color: var(--text-muted);
+}
+
+.nav-item:hover {
+    background-color: #292524 !important;
+    color: #fff;
+}
+
+.nav-item.active {
+    background-color: rgba(245, 158, 11, 0.1) !important;
+    color: var(--brand-orange) !important;
+    font-weight: 600;
+}
+
+.nav-item.active i {
+    color: var(--brand-orange) !important;
+}
+
+
+/* Status Badges tweaked for dark background visibility */
+.status-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Table Overrides */
+table thead tr {
+    border-bottom: 1px solid var(--surface-border) !important;
+}
+
+table tbody tr {
+    border-bottom: 1px solid var(--surface-border) !important;
+}
+
+table tbody tr:hover {
+    background-color: #292524 !important;
+}
+
+/* Header Tweaks */
+header {
+    background-color: var(--surface-light) !important;
+    border-bottom: 1px solid var(--surface-border) !important;
+}
+
+aside {
+    background-color: var(--surface-light) !important;
+    border-right: 1px solid var(--surface-border) !important;
+}
+
+aside .border-t,
+aside .border-b {
+    border-color: var(--surface-border) !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+th {
+    color: #fff !important;
+}
+
+p {
+    color: var(--text-muted);
+}
