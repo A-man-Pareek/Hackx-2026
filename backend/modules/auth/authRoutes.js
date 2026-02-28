@@ -11,8 +11,6 @@ const authController = require('./authController');
  */
 router.post(
     '/register',
-    authenticate,
-    authorizeRoles('admin'),
     authController.register
 );
 

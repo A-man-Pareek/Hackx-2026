@@ -27,6 +27,7 @@ jest.mock('../config/firebase', () => {
             })
         },
         adminAuth: {
+            verifyIdToken: mockAuthVerifyIdToken,
             createUser: mockAuthCreateUser,
             updateUser: mockAuthUpdateUser
         },
@@ -102,108 +103,59 @@ describe('Auth Endpoints', () => {
     });
 
     describe('POST /register', () => {
-        const setupMockCaller = (role, branchId = null) => {
-            _mockFns.mockAuthVerifyIdToken.mockResolvedValueOnce({ uid: 'caller-uid' });
-            _mockFns.mockDbCollectionDocGet.mockImplementationOnce(() => Promise.resolve({
-                exists: true,
-                data: () => ({
-                    role,
-                    branchId,
-                    email: 'caller@test.com',
-                    name: 'Caller',
-                    isActive: true
-                })
-            }));
-        };
-
-        it('should reject non-admin caller', async () => {
-            setupMockCaller('branch_manager', 'b1');
-
-            const res = await request(app)
-                .post('/auth/register')
-                .set('Authorization', 'Bearer caller-token')
-                .send({
-                    name: 'New',
-                    email: 'new@test.com',
-                    password: 'password123',
-                    role: 'staff',
-                    branchId: 'b1'
-                });
-
-            expect(res.status).toBe(403);
-            expect(res.body.error).toContain('Forbidden: Requires one of roles: admin');
+        beforeEach(() => {
+            _mockFns.mockAuthVerifyIdToken.mockResolvedValue({ uid: 'new-uid', email: 'new@test.com' });
+            _mockFns.mockDbCollectionDocGet.mockResolvedValue({ exists: false });
         });
 
-        it('should allow admin creating admin', async () => {
-            setupMockCaller('admin'); // First get is for middleware
-
-            _mockFns.mockAuthCreateUser.mockResolvedValueOnce({ uid: 'mock-created-uid' });
-
+        it('should reject missing token', async () => {
             const res = await request(app)
                 .post('/auth/register')
-                .set('Authorization', 'Bearer caller-token')
-                .send({
-                    name: 'New',
-                    email: 'new@test.com',
-                    password: 'password123',
-                    role: 'admin' // In new schema, admin can create anyone
-                });
+                .send({ name: 'New', role: 'customer' });
 
-            expect(res.status).toBe(201);
+            expect(res.status).toBe(401);
+            expect(res.body.error).toContain('Unauthorized: Missing token');
         });
 
-        it('should allow admin creating staff', async () => {
-            setupMockCaller('admin');
-
-            _mockFns.mockAuthCreateUser.mockResolvedValueOnce({ uid: 'mock-created-uid' });
-
+        it('should allow registering a customer', async () => {
             const res = await request(app)
                 .post('/auth/register')
-                .set('Authorization', 'Bearer caller-token')
-                .send({
-                    name: 'New',
-                    email: 'new@test.com',
-                    password: 'password123',
-                    role: 'staff',
-                    branchId: 'b1'
-                });
+                .set('Authorization', 'Bearer valid-token')
+                .send({ name: 'New Customer', role: 'customer' });
 
             expect(res.status).toBe(201);
             expect(_mockFns.mockDbCollectionDocSet).toHaveBeenCalled();
         });
 
-        it('should reject missing branchId for staff', async () => {
-            setupMockCaller('admin');
-
+        it('should allow registering a restaurant_owner', async () => {
             const res = await request(app)
                 .post('/auth/register')
-                .set('Authorization', 'Bearer caller-token')
-                .send({
-                    name: 'New',
-                    email: 'new@test.com',
-                    password: 'password123',
-                    role: 'staff' // missing branchId
-                });
+                .set('Authorization', 'Bearer valid-token')
+                .send({ name: 'New Owner', role: 'restaurant_owner', branchId: 'b1' });
 
-            expect(res.status).toBe(400);
-            expect(res.body.error).toContain('branchId is required');
+            expect(res.status).toBe(201);
+            expect(_mockFns.mockDbCollectionDocSet).toHaveBeenCalled();
         });
 
-        it('should validate email format', async () => {
-            setupMockCaller('admin');
+        it('should reject invalid role', async () => {
             const res = await request(app)
                 .post('/auth/register')
-                .set('Authorization', 'Bearer caller-token')
-                .send({
-                    name: 'New',
-                    email: 'InvalidEmailFormat',
-                    password: 'password123',
-                    role: 'staff',
-                    branchId: 'b1'
-                });
+                .set('Authorization', 'Bearer valid-token')
+                .send({ name: 'Hacker', role: 'admin' });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Invalid email format');
+            expect(res.body.error).toContain('Invalid role');
+        });
+
+        it('should reject if user already registered', async () => {
+            _mockFns.mockDbCollectionDocGet.mockResolvedValueOnce({ exists: true });
+            const res = await request(app)
+                .post('/auth/register')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ name: 'Existing', role: 'customer' });
+
+            expect(res.status).toBe(409);
+            expect(res.body.error).toContain('User already exists in database');
         });
     });
 
@@ -221,15 +173,8 @@ describe('Auth Endpoints', () => {
             }));
         };
 
-        it('should reject branch_manager deactivating admin', async () => {
-            setupMockCaller('branch_manager');
-            _mockFns.mockDbCollectionDocGet.mockImplementationOnce(() => Promise.resolve({
-                exists: true,
-                data: () => ({
-                    role: 'admin',
-                    isActive: true
-                })
-            }));
+        it('should reject non-admin caller', async () => {
+            setupMockCaller('restaurant_owner');
 
             const res = await request(app)
                 .patch('/auth/deactivate/super-uid')
@@ -239,22 +184,22 @@ describe('Auth Endpoints', () => {
             expect(res.body.error).toContain('Forbidden: Requires one of roles: admin');
         });
 
-        it('should allow admin deactivating staff', async () => {
+        it('should allow admin deactivating user (legacy support)', async () => {
             setupMockCaller('admin');
             _mockFns.mockDbCollectionDocGet.mockImplementationOnce(() => Promise.resolve({
                 exists: true,
                 data: () => ({
-                    role: 'staff',
+                    role: 'customer',
                     isActive: true
                 })
             }));
 
             const res = await request(app)
-                .patch('/auth/deactivate/staff-uid')
+                .patch('/auth/deactivate/target-uid')
                 .set('Authorization', 'Bearer caller-token');
 
             expect(res.status).toBe(200);
-            expect(_mockFns.mockAuthUpdateUser).toHaveBeenCalledWith('staff-uid', { disabled: true });
+            expect(_mockFns.mockAuthUpdateUser).toHaveBeenCalledWith('target-uid', { disabled: true });
             expect(_mockFns.mockDbCollectionDocUpdate).toHaveBeenCalledWith({ isActive: false });
         });
     });

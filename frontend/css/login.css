@@ -351,9 +351,7 @@ input::placeholder {
     /* Re-enable clicks on the visible overlay section */
 }
 
-.container.right-panel-active .overlay {
-    /* The internal glow logic is moved to drop-shadow on overlay-container */
-}
+
 
 .overlay-panel {
     position: absolute;

@@ -20,10 +20,18 @@
 <!-- Initial Login Button and Branding -->
 <div class="brand-intro" id="brandIntro">
     <div class="logo">
-        <i class="fa-solid fa-utensils"></i> FlavorAI
+        <i class="fa-solid fa-utensils"></i> ReviewIQ
     </div>
     <p class="tagline">The ultimate AI companion for culinary excellence.</p>
-    <button id="startLoginBtn" class="start-login-btn">Get Started</button>
+    <div class="role-selection">
+        <p style="font-size: 1.2rem; font-weight: 500; margin-bottom: 20px;">I am a...</p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button id="startCustomerBtn" class="start-login-btn" data-role="customer"><i class="fa-solid fa-user"></i>
+                Customer</button>
+            <button id="startOwnerBtn" class="start-login-btn" data-role="restaurant_owner"><i
+                    class="fa-solid fa-store"></i> Restaurant Owner</button>
+        </div>
+    </div>
 </div>
 
 <!-- Wrapper to hide the main container initially -->
@@ -88,6 +96,6 @@
     </div>
 </div>
 </body>
-<script src="/frontend/js/login.js"></script>
+<script type="module" src="/frontend/js/login.js"></script>
 
 </html>
