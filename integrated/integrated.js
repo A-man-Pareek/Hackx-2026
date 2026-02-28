@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, collection, getDoc, getDocs, query, orderBy, addDoc, updateDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // Tab Navigation Logic
@@ -45,12 +45,14 @@ const db = getFirestore(app);
 
 // State
 let currentUser = null;
+let currentRestaurantId = null;
 let allReviews = [];
 let branchMap = {};
+let branchDetailsMap = {};
+let placeIdMap = {};
 let staffMap = {};
 let sentimentChart = null;
 let trendChart = null;
-let branchBarChart = null;
 
 // AUTHENTICATION
 onAuthStateChanged(auth, async (user) => {
@@ -60,6 +62,7 @@ onAuthStateChanged(auth, async (user) => {
         showLoginScreen();
     }
 });
+
 function showLoginScreen() {
     document.getElementById('loginOverlay').classList.remove('hidden');
     document.getElementById('loginOverlay').classList.remove('opacity-0');
@@ -67,22 +70,38 @@ function showLoginScreen() {
     document.getElementById('appWorkspace').classList.remove('opacity-100');
 }
 
-document.getElementById('googleSignInBtn').addEventListener('click', () => {
-    const btn = document.getElementById('googleSignInBtn');
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
-
-    signInWithPopup(auth, provider).then((result) => {
-        console.log("Popup sign-in successful:", result.user.uid);
-    }).catch(err => {
-        console.error("Popup sign-in error:", err);
-        document.getElementById('loginError').textContent = err.message;
-        document.getElementById('loginError').classList.remove('hidden');
-        btn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo" class="w-5 h-5"> Sign in with Google';
+if (document.getElementById('googleSignInBtn')) {
+    document.getElementById('googleSignInBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('googleSignInBtn');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+        try {
+            const result = await signInWithPopup(auth, provider);
+            console.log("Popup sign in successful");
+        } catch (err) {
+            if (document.getElementById('loginError')) {
+                document.getElementById('loginError').textContent = err.message;
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+            btn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo" class="w-5 h-5"> Sign in with Google';
+        }
     });
+}
+
+// Catch any errors from the redirect flow if it comes back
+getRedirectResult(auth).catch((error) => {
+    console.error("Redirect sign-in error:", error);
+    if (document.getElementById('loginError')) {
+        document.getElementById('loginError').textContent = "Sign-in error: " + error.message;
+        document.getElementById('loginError').classList.remove('hidden');
+    }
+    const btn = document.getElementById('googleSignInBtn');
+    if (btn) btn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo" class="w-5 h-5"> Sign in with Google';
 });
 
 // We keep this function around in case they log out from the dashboard
-document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+if (document.getElementById('logoutBtn')) {
+    document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+}
 
 async function handleSuccessfulLogin(firebaseUser) {
     try {
@@ -99,8 +118,6 @@ async function handleSuccessfulLogin(firebaseUser) {
         document.getElementById('userNameDisplay').textContent = currentUser.name;
         document.getElementById('userRoleDisplay').textContent = currentUser.role.replace('_', ' ') + " • Access granted";
         document.getElementById('userAvatar').src = firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=1d4ed8&color=fff`;
-
-        if (currentUser.role === 'admin') document.getElementById('openAddRestaurantBtn').classList.remove('hidden');
 
         console.log("Hiding login overlay...");
         // Show workspace
@@ -125,27 +142,148 @@ async function handleSuccessfulLogin(firebaseUser) {
     }
 }
 
-// FETCH DATA
+// FETCH DATA & INITIALIZATION
 async function initDataFetch() {
-    await Promise.all([fetchBranches(), fetchStaff()]);
+    await fetchBranches();
+    document.getElementById('restaurantSelectionOverlay').classList.remove('hidden');
+    await fetchStaff();
     await fetchReviews();
     setupFilters();
 }
 
+function selectRestaurant(id, name) {
+    currentRestaurantId = id;
+    document.getElementById('restaurantSelectionOverlay').classList.add('hidden');
+
+    // Update top nav
+    document.getElementById('topNavRestaurantName').textContent = name;
+    document.getElementById('topNavRestaurantLoc').textContent = "Active Location";
+
+    renderDashboard();
+}
+
+// Overlay button listeners
+if (document.getElementById('logoutFromOverlayBtn')) {
+    document.getElementById('logoutFromOverlayBtn').addEventListener('click', () => signOut(auth));
+}
+
+// Top nav bar click to return to selection
+if (document.getElementById('activeRestaurantDisplay')) {
+    document.getElementById('activeRestaurantDisplay').addEventListener('click', () => {
+        document.getElementById('restaurantSelectionOverlay').classList.remove('hidden');
+    });
+}
+
+// SEARCH RESTAURANT LOGIC
+const searchForm = document.getElementById('overlaySearchForm');
+if (searchForm) {
+    searchForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('overlaySearchBtn');
+        const err = document.getElementById('overlaySearchError');
+        const og = btn.innerHTML;
+
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Searching...';
+        err.classList.add('hidden');
+
+        try {
+            let query = document.getElementById('overlaySearchInput').value.trim();
+            if (!query.toLowerCase().includes('restaurant') && !query.toLowerCase().includes('cafe') && !query.toLowerCase().includes('food')) {
+                query += " restaurant"; // Force it to search for dining establishments to prevent names/cities being accepted
+            }
+
+            const searchRes = await fetch("https://places.googleapis.com/v1/places:searchText", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY, "X-Goog-FieldMask": "places.id" },
+                body: JSON.stringify({ textQuery: query })
+            });
+
+            if (!searchRes.ok) throw new Error("Google Places API failed");
+            const searchData = await searchRes.json();
+
+            if (!searchData.places || !searchData.places.length) throw new Error("No restaurant or cafe found matching this name worldwide.");
+
+            const placeId = searchData.places[0].id;
+
+            // Check if we already have this restaurant in DB
+            if (placeIdMap[placeId]) {
+                const bId = placeIdMap[placeId];
+                selectRestaurant(bId, branchMap[bId]);
+            } else {
+                // Fetch finer details using the New API
+                const detRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,rating,userRatingCount,reviews,photos,regularOpeningHours,internationalPhoneNumber,websiteUri,businessStatus&key=${GOOGLE_PLACES_API_KEY}`);
+                if (!detRes.ok) throw new Error("Failed to fetch detailed data for the restaurant");
+
+                const detData = await detRes.json();
+                const branchName = detData.displayName?.text || decodeURIComponent(query);
+                const phone = detData.internationalPhoneNumber || "";
+                const website = detData.websiteUri || "";
+                const bStatus = detData.businessStatus || "OPERATIONAL";
+                const photoRef = detData.photos && detData.photos.length > 0 ? detData.photos[0].name : null;
+                const hours = detData.regularOpeningHours?.weekdayDescriptions ? detData.regularOpeningHours.weekdayDescriptions : null;
+
+                const branchRef = await addDoc(collection(db, "branches"), {
+                    name: branchName,
+                    location: detData.formattedAddress || "",
+                    managerId: currentUser.uid,
+                    placeId: placeId,
+                    status: "active",
+                    totalReviews: detData.userRatingCount || 0,
+                    averageRating: detData.rating || 0,
+                    createdAt: serverTimestamp(),
+                    phone: phone,
+                    website: website,
+                    businessStatus: bStatus,
+                    photoRef: photoRef,
+                    openingHours: hours
+                });
+
+                if (detData.reviews && detData.reviews.length > 0) {
+                    for (const r of detData.reviews) {
+                        const rName = r.authorAttribution?.displayName || "Google User";
+                        const rRating = r.rating || 0;
+                        const rText = r.text?.text || "No review text provided.";
+                        // Convert ISO string to unix timestamp equivalent ms
+                        const rTime = r.publishTime ? new Date(r.publishTime).getTime() : Date.now();
+
+                        await addDoc(collection(db, "reviews"), {
+                            branchId: branchRef.id,
+                            source: "google",
+                            externalReviewId: `${rName}_${rTime}`,
+                            authorName: rName,
+                            rating: rRating,
+                            reviewText: rText,
+                            sentiment: rRating > 3 ? 'positive' : rRating === 3 ? 'neutral' : 'negative',
+                            status: rRating <= 2 ? "critical" : "normal",
+                            responseStatus: "pending",
+                            externalTimestamp: rTime,
+                            syncedAt: serverTimestamp(),
+                            createdAt: serverTimestamp()
+                        });
+                    }
+                }
+
+                // Refresh data arrays
+                await fetchBranches();
+                await fetchReviews();
+                selectRestaurant(branchRef.id, branchName);
+            }
+        } catch (e) { err.textContent = e.message; err.classList.remove('hidden'); }
+
+        btn.disabled = false; btn.innerHTML = og;
+    };
+}
+
 async function fetchBranches() {
+    branchMap = {};
+    branchDetailsMap = {};
+    placeIdMap = {};
     const snap = await getDocs(collection(db, "branches"));
-    const sel = document.getElementById('branchSelector');
-    sel.innerHTML = '<option value="all">🏢 All Branches Overview</option>';
     snap.forEach(doc => {
         branchMap[doc.id] = doc.data().name;
-        if (currentUser.role === 'admin' || currentUser.branchId === doc.id) {
-            sel.innerHTML += `<option value="${doc.id}">📍 ${doc.data().name}</option>`;
-        }
+        branchDetailsMap[doc.id] = doc.data();
+        if (doc.data().placeId) placeIdMap[doc.data().placeId] = doc.id;
     });
-    if (currentUser.role === 'branch_manager' && currentUser.branchId) {
-        sel.value = currentUser.branchId;
-        sel.querySelector('option[value="all"]').disabled = true;
-    }
 }
 
 async function fetchStaff() {
@@ -156,19 +294,18 @@ async function fetchStaff() {
 async function fetchReviews() {
     const snap = await getDocs(query(collection(db, "reviews"), orderBy("createdAt", "desc")));
     allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderDashboard();
 }
 
 // RENDER LOGIC
 function setupFilters() {
-    document.getElementById('branchSelector').addEventListener('change', renderDashboard);
     document.getElementById('filterStatus').addEventListener('change', renderDashboard);
     document.getElementById('filterSentiment').addEventListener('change', renderDashboard);
     document.getElementById('globalSearchInput').addEventListener('keyup', renderDashboard);
 }
 
 function renderDashboard() {
-    const branch = document.getElementById('branchSelector').value;
+    if (!currentRestaurantId) return;
+
     const statusFull = document.getElementById('filterStatus').value || "all";
     const status = statusFull.includes(': ') ? statusFull.split(': ').pop().toLowerCase() : "all";
 
@@ -178,17 +315,21 @@ function renderDashboard() {
     const queryText = document.getElementById('globalSearchInput').value.toLowerCase().trim();
 
     let filtered = allReviews.filter(r => {
-        if (currentUser.role === 'branch_manager' && r.branchId !== currentUser.branchId) return false;
-        if (branch !== 'all' && r.branchId !== branch) return false;
-        if (status !== 'all' && status !== r.status) return false;
+        if (r.branchId !== currentRestaurantId) return false;
+
+        if (status === 'pending' || status === 'responded') {
+            if (r.responseStatus !== status) return false;
+        } else if (status !== 'all' && status !== r.status) {
+            return false;
+        }
+
         if (sentiment !== 'all' && sentiment !== r.sentiment) return false;
 
         if (queryText) {
             const matchText = (r.reviewText || '').toLowerCase().includes(queryText);
             const matchAuthor = (r.authorName || '').toLowerCase().includes(queryText);
-            const matchBranch = (branchMap[r.branchId] || '').toLowerCase().includes(queryText);
             const matchStaff = (r.staffTagged || '').toLowerCase().includes(queryText);
-            if (!matchText && !matchAuthor && !matchBranch && !matchStaff) return false;
+            if (!matchText && !matchAuthor && !matchStaff) return false;
         }
 
         return true;
@@ -196,11 +337,75 @@ function renderDashboard() {
 
     updateKPIs(filtered);
     renderTable(filtered);
-    updatePerformanceTable(filtered);
-    updateStaffTable(filtered);
+    updateLocationCard();
     updateCharts(filtered, allReviews);
     updateAnalyticsTab(filtered);
+    updateStaffTable(filtered);
+    updatePerformanceTable(filtered);
     generateMonthlyAIOverview(filtered);
+}
+
+function updateLocationCard() {
+    const branchInfo = branchDetailsMap[currentRestaurantId];
+    if (!branchInfo) return;
+
+    const brandName = document.getElementById('locationBrandName');
+    const addressFull = document.getElementById('locationAddressFull');
+    const phone = document.getElementById('locationPhone');
+    const website = document.getElementById('locationWebsite');
+    const hours = document.getElementById('locationHours');
+    const statusBadge = document.getElementById('locationStatusBadge');
+    const headerImg = document.getElementById('locationHeaderImg');
+
+    if (brandName) brandName.textContent = branchInfo.name || "Unknown Location";
+    if (addressFull) addressFull.textContent = branchInfo.location || "Location not provided";
+
+    if (phone) phone.textContent = branchInfo.phone || "No phone provided";
+
+    if (website) {
+        if (branchInfo.website) {
+            website.href = branchInfo.website;
+            website.textContent = branchInfo.website.replace(/^https?:\/\//, '').split('/')[0];
+        } else {
+            website.href = "#";
+            website.textContent = "Not available";
+        }
+    }
+
+    if (hours) {
+        if (branchInfo.openingHours && Array.isArray(branchInfo.openingHours)) {
+            hours.innerHTML = branchInfo.openingHours.join('<br>');
+        } else if (branchInfo.openingHours) {
+            hours.textContent = branchInfo.openingHours;
+        } else {
+            hours.textContent = "Hours unknown";
+        }
+    }
+
+    if (statusBadge) {
+        statusBadge.textContent = branchInfo.businessStatus ? branchInfo.businessStatus.toLowerCase().replace('_', ' ') : "operational";
+        if (statusBadge.textContent.includes('closed')) {
+            statusBadge.classList.replace('bg-emerald-500/90', 'bg-red-500/90');
+            statusBadge.classList.replace('border-emerald-400', 'border-red-400');
+        } else {
+            statusBadge.classList.replace('bg-red-500/90', 'bg-emerald-500/90');
+            statusBadge.classList.replace('border-red-400', 'border-emerald-400');
+        }
+    }
+
+    if (headerImg) {
+        let photoUrl = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80';
+        if (branchInfo.photoRef) {
+            if (branchInfo.photoRef.startsWith('places/')) {
+                // New API format
+                photoUrl = `https://places.googleapis.com/v1/${branchInfo.photoRef}/media?maxHeightPx=800&maxWidthPx=800&key=${GOOGLE_PLACES_API_KEY}`;
+            } else {
+                // Legacy API format
+                photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${branchInfo.photoRef}&key=${GOOGLE_PLACES_API_KEY}`;
+            }
+        }
+        headerImg.style.backgroundImage = `url('${photoUrl}')`;
+    }
 }
 
 function updateKPIs(data) {
@@ -209,29 +414,17 @@ function updateKPIs(data) {
     const avg = tot ? (data.reduce((acc, r) => acc + r.rating, 0) / tot).toFixed(1) : "0.0";
     const sentScore = tot ? Math.round((data.filter(r => r.sentiment === 'positive').length / tot) * 100) : 0;
 
-    const idTotal = document.getElementById('stat-total');
-    if (idTotal) idTotal.textContent = tot.toLocaleString();
-
-    const idAvg = document.getElementById('stat-avg');
-    if (idAvg) idAvg.textContent = avg;
-
-    const idCrit = document.getElementById('stat-critical');
-    if (idCrit) idCrit.textContent = crit;
-
-    const idSent = document.getElementById('stat-sentiment');
-    if (idSent) idSent.textContent = sentScore;
+    document.getElementById('stat-total').textContent = tot.toLocaleString();
+    document.getElementById('stat-avg').textContent = avg;
+    document.getElementById('stat-critical').textContent = crit;
+    document.getElementById('stat-sentiment').textContent = sentScore;
 
     const bar = document.getElementById('stat-sentiment-bar');
-    if (bar) {
-        bar.style.width = sentScore + '%';
-        bar.className = `absolute bottom-0 left-0 h-1 rounded-b-xl transition-all duration-1000 ${sentScore >= 70 ? 'bg-emerald-500' : sentScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`;
-    }
+    bar.style.width = sentScore + '%';
+    bar.className = `absolute bottom-0 left-0 h-1 rounded-b-xl transition-all duration-1000 ${sentScore >= 70 ? 'bg-emerald-500' : sentScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`;
 
-    const cSub = document.getElementById('critical-subtitle');
-    if (cSub) cSub.textContent = `${crit} Critical issues pending response`;
-
-    const cSubTable = document.getElementById('critical-subtitle-table');
-    if (cSubTable) cSubTable.textContent = `${crit} Critical issues pending response`;
+    document.getElementById('critical-subtitle').textContent = `${crit} Critical issues pending response`;
+    document.getElementById('critical-subtitle-table').textContent = `${crit} Critical issues pending response`;
 
     // Sidebar unread badge
     const sidebarCount = document.getElementById('sidebar-critical-count');
@@ -397,10 +590,10 @@ function updateStaffTable(data) {
     });
 
     data.forEach(r => {
-        if (stats[r.staffId]) {
-            stats[r.staffId].mentions++;
-            stats[r.staffId].ratingSum += r.rating;
-            if (r.sentiment === 'positive') stats[r.staffId].positiveCount++;
+        if (stats[r.staffTagged]) {
+            stats[r.staffTagged].mentions++;
+            stats[r.staffTagged].ratingSum += r.rating;
+            if (r.sentiment === 'positive') stats[r.staffTagged].positiveCount++;
         }
     });
 
@@ -485,6 +678,9 @@ function updateAnalyticsTab(data) {
                     layout: { padding: 10 }
                 }
             });
+        } else {
+            analyticsPieChart.data.datasets[0].data = [p, u, n];
+            analyticsPieChart.update();
         }
     }
 }
@@ -527,7 +723,7 @@ function generateMonthlyAIOverview(data) {
         if (positives.length > 0) {
             posList.innerHTML = positives.map(r => {
                 const insight = extractInsight(r.reviewText, true);
-                const staffMention = r.staffId !== 'unassigned' && staffMap[r.staffId] ? ` (Validated by praise for: <b>${staffMap[r.staffId]}</b>)` : '';
+                const staffMention = r.staffTagged !== 'unassigned' && staffMap[r.staffTagged] ? ` (Validated by praise for: <b>${staffMap[r.staffTagged]}</b>)` : '';
                 return `
                 <li class="flex items-start gap-3 text-sm text-gray-300 bg-[#1c1917] p-3 rounded-lg border border-[#292524] shadow-sm relative pl-8">
                     <i class="fa-solid fa-check text-emerald-500 absolute left-3 top-4"></i>
@@ -545,7 +741,7 @@ function generateMonthlyAIOverview(data) {
         if (negatives.length > 0) {
             negList.innerHTML = negatives.map(r => {
                 const insight = extractInsight(r.reviewText, false);
-                const staffMention = r.staffId !== 'unassigned' && staffMap[r.staffId] ? ` (Issue correlated with: <b>${staffMap[r.staffId]}</b>)` : '';
+                const staffMention = r.staffTagged !== 'unassigned' && staffMap[r.staffTagged] ? ` (Issue correlated with: <b>${staffMap[r.staffTagged]}</b>)` : '';
                 return `
                 <li class="flex items-start gap-3 text-sm text-gray-300 bg-[#1c1917] p-3 rounded-lg border border-[#292524] shadow-sm relative pl-8">
                     <i class="fa-solid fa-triangle-exclamation text-red-500 absolute left-3 top-4"></i>
@@ -582,9 +778,7 @@ function generateMonthlyAIOverview(data) {
 const refreshAiBtn = document.getElementById('refreshAiInsightsBtn');
 if (refreshAiBtn) {
     refreshAiBtn.addEventListener('click', () => {
-        const selectedBranch = document.getElementById('branchSelector').value;
-        const filtered = allReviews.filter(r => selectedBranch === 'all' || r.branchId === selectedBranch);
-        generateMonthlyAIOverview(filtered);
+        renderDashboard();
     });
 }
 
@@ -594,30 +788,20 @@ function updateCharts(data, all) {
     const n = data.filter(r => r.sentiment === 'negative').length;
     const t = p + u + n;
 
-    const dPos = document.getElementById('doughnut-pos');
-    if (dPos) dPos.textContent = p;
+    document.getElementById('doughnut-pos').textContent = p;
+    document.getElementById('doughnut-neu').textContent = u;
+    document.getElementById('doughnut-neg').textContent = n;
+    document.getElementById('doughnut-center').textContent = t ? Math.round((p / t) * 100) + '%' : '0%';
 
-    const dNeu = document.getElementById('doughnut-neu');
-    if (dNeu) dNeu.textContent = u;
-
-    const dNeg = document.getElementById('doughnut-neg');
-    if (dNeg) dNeg.textContent = n;
-
-    const dCenter = document.getElementById('doughnut-center');
-    if (dCenter) dCenter.textContent = t ? Math.round((p / t) * 100) + '%' : '0%';
-
-    const sDoughnut = document.getElementById('sentimentDoughnut');
-    if (sDoughnut) {
-        if (!sentimentChart) {
-            sentimentChart = new Chart(sDoughnut.getContext('2d'), {
-                type: 'doughnut',
-                data: { labels: ['Pos', 'Neu', 'Neg'], datasets: [{ data: [p, u, n], backgroundColor: ['#10B981', '#FBBF24', '#EF4444'], borderWidth: 0, hoverOffset: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
-            });
-        } else {
-            sentimentChart.data.datasets[0].data = [p, u, n];
-            sentimentChart.update();
-        }
+    if (!sentimentChart) {
+        sentimentChart = new Chart(document.getElementById('sentimentDoughnut').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['Pos', 'Neu', 'Neg'], datasets: [{ data: [p, u, n], backgroundColor: ['#10B981', '#FBBF24', '#EF4444'], borderWidth: 0, hoverOffset: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
+        });
+    } else {
+        sentimentChart.data.datasets[0].data = [p, u, n];
+        sentimentChart.update();
     }
 
     if (!trendChart) {
@@ -661,8 +845,8 @@ function updateCharts(data, all) {
 
     const ctxBar = document.getElementById('branchBarChart');
     if (ctxBar) {
-        if (!branchBarChart) {
-            branchBarChart = new Chart(ctxBar.getContext('2d'), {
+        if (!window.branchBarChart) {
+            window.branchBarChart = new Chart(ctxBar.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -685,250 +869,97 @@ function updateCharts(data, all) {
                 }
             });
         } else {
-            branchBarChart.data.labels = labels;
-            branchBarChart.data.datasets[0].data = avgData;
-            branchBarChart.update();
+            window.branchBarChart.data.labels = labels;
+            window.branchBarChart.data.datasets[0].data = avgData;
+            window.branchBarChart.update();
         }
     }
 }
+
+// REPLY MODAL LOGIC
 
 let currentReviewForModal = null;
 
 function openReplyModal(r) {
     currentReviewForModal = r;
+    if (!document.getElementById('modalReviewId')) return;
     document.getElementById('modalReviewId').value = r.id;
     document.getElementById('modalReviewText').textContent = `"${r.reviewText}"`;
     document.getElementById('replyMessage').value = '';
     document.getElementById('replyModal').classList.remove('hidden');
 }
+
 function closeReplyModal() {
-    document.getElementById('replyModal').classList.add('hidden');
+    if (document.getElementById('replyModal')) document.getElementById('replyModal').classList.add('hidden');
     currentReviewForModal = null;
 }
-document.getElementById('closeModalBtn').onclick = closeReplyModal;
-document.getElementById('cancelModalBtn').onclick = closeReplyModal;
 
-document.getElementById('generateAiReplyBtn').addEventListener('click', () => {
-    const btn = document.getElementById('generateAiReplyBtn');
-    const textArea = document.getElementById('replyMessage');
+if (document.getElementById('closeModalBtn')) document.getElementById('closeModalBtn').onclick = closeReplyModal;
+if (document.getElementById('cancelModalBtn')) document.getElementById('cancelModalBtn').onclick = closeReplyModal;
 
-    if (!currentReviewForModal) return;
+const aiBtn = document.getElementById('generateAiReplyBtn');
+if (aiBtn) {
+    aiBtn.onclick = () => {
+        const btn = document.getElementById('generateAiReplyBtn');
+        const textArea = document.getElementById('replyMessage');
 
-    // Animate button
-    const ogHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
-    btn.disabled = true;
+        if (!currentReviewForModal) return;
 
-    setTimeout(() => {
-        const rating = currentReviewForModal.rating || 0;
-        const author = currentReviewForModal.authorName || "Valued Guest";
+        // Animate button
+        const ogHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+        btn.disabled = true;
 
-        let response = "";
-        if (rating >= 4) {
-            response = `Dear ${author},\n\nThank you so much for your glowing ${rating}-star review! We are absolutely thrilled to hear that you had an excellent experience with us. Your kind words mean the world to our team, and we can't wait to welcome you back again soon.\n\nWarm regards,\nThe Management Team`;
-        } else if (rating === 3) {
-            response = `Dear ${author},\n\nThank you for taking the time to leave us your feedback. While we are glad you visited, we always strive for a 5-star experience and would love to know how we can improve. Please reach out to us directly so we can make your next visit perfect.\n\nBest regards,\nThe Management Team`;
-        } else {
-            response = `Dear ${author},\n\nWe are truly sorry to hear that your experience did not meet expectations. Providing exceptional service is our top priority, and it seems we fell short this time. We would greatly appreciate the opportunity to make things right. Please contact us directly at support@restaurant.com so we can address your concerns personally.\n\nSincerely,\nThe Management Team`;
-        }
+        setTimeout(() => {
+            const rating = currentReviewForModal.rating || 0;
+            const author = currentReviewForModal.authorName || "Valued Guest";
 
-        // Typewriter effect
-        textArea.value = "";
-        let i = 0;
-        const speed = 10;
-        function typeWriter() {
-            if (i < response.length) {
-                textArea.value += response.charAt(i);
-                i++;
-                setTimeout(typeWriter, speed);
+            let response = "";
+            if (rating >= 4) {
+                response = `Dear ${author}, \n\nThank you so much for your glowing ${rating} -star review! We are absolutely thrilled to hear that you had an excellent experience with us.Your kind words mean the world to our team, and we can't wait to welcome you back again soon.\n\nWarm regards,\nThe Management Team`;
+            } else if (rating === 3) {
+                response = `Dear ${author},\n\nThank you for taking the time to leave us your feedback. While we are glad you visited, we always strive for a 5-star experience and would love to know how we can improve. Please reach out to us directly so we can make your next visit perfect.\n\nBest regards,\nThe Management Team`;
             } else {
-                btn.innerHTML = ogHtml;
-                btn.disabled = false;
+                response = `Dear ${author},\n\nWe are truly sorry to hear that your experience did not meet expectations. Providing exceptional service is our top priority, and it seems we fell short this time. We would greatly appreciate the opportunity to make things right. Please contact us directly at support@restaurant.com so we can address your concerns personally.\n\nSincerely,\nThe Management Team`;
             }
-        }
-        typeWriter();
 
-    }, 800); // Simulate API delay
-});
-
-document.getElementById('replyForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('submitReplyBtn');
-    const og = btn.innerHTML;
-    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-
-    try {
-        const id = document.getElementById('modalReviewId').value;
-        await setDoc(doc(collection(db, "responses")), {
-            reviewId: id, responseText: document.getElementById('replyMessage').value, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
-        });
-        await updateDoc(doc(db, "reviews", id), { responseStatus: "responded" });
-        allReviews.find(r => r.id === id).responseStatus = 'responded';
-        renderDashboard();
-        closeReplyModal();
-    } catch (e) { alert("Error saving response: " + e.message); }
-    btn.disabled = false; btn.innerHTML = og;
-};
-
-// BULK AI AUTO-REPLY LOGIC
-const bulkAiReplyBtn = document.getElementById('bulkAiReplyBtn');
-if (bulkAiReplyBtn) {
-    bulkAiReplyBtn.addEventListener('click', async () => {
-        const pendingReviews = allReviews.filter(r => r.responseStatus !== 'responded');
-
-        if (pendingReviews.length === 0) {
-            alert('No pending reviews to auto-reply to!');
-            return;
-        }
-
-        if (!confirm(`Are you sure you want to AI auto-reply to ${pendingReviews.length} pending review(s)?`)) return;
-
-        const ogHtml = bulkAiReplyBtn.innerHTML;
-        bulkAiReplyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Auto-Replying... (' + pendingReviews.length + ')';
-        bulkAiReplyBtn.disabled = true;
-
-        let successCount = 0;
-
-        try {
-            // Process sequentially to avoid slamming the frontend or firebase
-            for (const r of pendingReviews) {
-                const rating = r.rating || 0;
-                const author = r.authorName || "Valued Guest";
-
-                let responseText = "";
-                if (rating >= 4) {
-                    responseText = `Dear ${author},\n\nThank you so much for your glowing ${rating}-star review! We are absolutely thrilled to hear that you had an excellent experience with us. Your kind words mean the world to our team, and we can't wait to welcome you back again soon.\n\nWarm regards,\nThe Management Team`;
-                } else if (rating === 3) {
-                    responseText = `Dear ${author},\n\nThank you for taking the time to leave us your feedback. While we are glad you visited, we always strive for a 5-star experience and would love to know how we can improve. Please reach out to us directly so we can make your next visit perfect.\n\nBest regards,\nThe Management Team`;
+            // Typewriter effect
+            textArea.value = "";
+            let i = 0;
+            const speed = 10;
+            function typeWriter() {
+                if (i < response.length) {
+                    textArea.value += response.charAt(i);
+                    i++;
+                    setTimeout(typeWriter, speed);
                 } else {
-                    responseText = `Dear ${author},\n\nWe are truly sorry to hear that your experience did not meet expectations. Providing exceptional service is our top priority, and it seems we fell short this time. We would greatly appreciate the opportunity to make things right. Please contact us directly at support@restaurant.com so we can address your concerns personally.\n\nSincerely,\nThe Management Team`;
+                    btn.innerHTML = ogHtml;
+                    btn.disabled = false;
                 }
-
-                // Batch updates or single awaits
-                await setDoc(doc(collection(db, "responses")), {
-                    reviewId: r.id, responseText: responseText, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
-                });
-                await updateDoc(doc(db, "reviews", r.id), { responseStatus: "responded" });
-                r.responseStatus = 'responded';
-                successCount++;
             }
+            typeWriter();
 
-            renderDashboard();
-            alert(`Successfully sent ${successCount} AI auto-replies.`);
-        } catch (e) {
-            console.error("Error bulk responding:", e);
-            alert("An error occurred during bulk reply: " + e.message);
-        }
-
-        bulkAiReplyBtn.innerHTML = ogHtml;
-        bulkAiReplyBtn.disabled = false;
-    });
+        }, 800); // Simulate API delay
+    };
 }
 
-// ADD RESTAURANT MODAL (GOOGLE PROXY FETCH)
-const addMod = document.getElementById('addRestaurantModal');
-document.getElementById('openAddRestaurantBtn').onclick = () => { addMod.classList.remove('hidden'); document.getElementById('addRestaurantError').classList.add('hidden'); };
-document.getElementById('closeAddModalBtn').onclick = () => addMod.classList.add('hidden');
-
-document.getElementById('addRestaurantForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('submitAddBtn');
-    const err = document.getElementById('addRestaurantError');
-    const og = btn.innerHTML;
-
-    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Proxying Google API...';
-    err.classList.add('hidden');
-
-    try {
-        const bName = document.getElementById('searchName').value.trim();
-        const bLoc = document.getElementById('searchLocation').value.trim();
-        const query = encodeURIComponent(`${bName} ${bLoc}`);
-
-        let details = null;
-        let placeId = `mock_place_${Date.now()}`;
-
-        const fullMockReviews = [
-            { author_name: "Sarah Jenkins", rating: 5, text: "Excellent atmosphere and incredibly fast service! The staff was super friendly.", time: Math.floor(Date.now() / 1000) - 3600 },
-            { author_name: "Mark T.", rating: 2, text: "My order was completely wrong and it took 30 minutes to get someone to fix it. Very disappointing.", time: Math.floor(Date.now() / 1000) - 86400 },
-            { author_name: "Emily R.", rating: 4, text: "Great experience overall, but the music was a bit too loud for a business meeting.", time: Math.floor(Date.now() / 1000) - 172800 },
-            { author_name: "David Chen", rating: 1, text: "Absolutely terrible. Found a hair in my food and the manager didn't even care.", time: Math.floor(Date.now() / 1000) - 259200 },
-            { author_name: "Jessica Al.", rating: 5, text: "A hidden gem! The recommended specials were out of this world. I am coming back next week!", time: Math.floor(Date.now() / 1000) - 604800 },
-            { author_name: "Michael B.", rating: 3, text: "It was okay. Nothing spectacular but not bad either. Pricing is a bit high.", time: Math.floor(Date.now() / 1000) - 904800 },
-            { author_name: "Anna W.", rating: 5, text: "Best place in town! Will recommend it to everyone I know.", time: Math.floor(Date.now() / 1000) - 1004800 },
-            { author_name: "Oliver S.", rating: 4, text: "Good food, nice ambiance. Wait time was a little long.", time: Math.floor(Date.now() / 1000) - 1204800 },
-            { author_name: "Tom H.", rating: 2, text: "Disappointing. The steak was overcooked.", time: Math.floor(Date.now() / 1000) - 1304800 },
-            { author_name: "Rachel G.", rating: 5, text: "Love the new menu items. Try the dessert!", time: Math.floor(Date.now() / 1000) - 1404800 }
-        ];
+if (document.getElementById('replyForm')) {
+    document.getElementById('replyForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitReplyBtn');
+        const og = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
 
         try {
-            let query = restaurantName;
-            if (!query.toLowerCase().includes('restaurant') && !query.toLowerCase().includes('cafe') && !query.toLowerCase().includes('food')) {
-                query += " restaurant"; // Require dining places to block names/cities
-            }
-
-            const searchRes = await fetch("https://places.googleapis.com/v1/places:searchText", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY, "X-Goog-FieldMask": "places.id" },
-                body: JSON.stringify({ textQuery: query })
+            const id = document.getElementById('modalReviewId').value;
+            await setDoc(doc(collection(db, "responses")), {
+                reviewId: id, responseText: document.getElementById('replyMessage').value, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
             });
-
-            if (!searchRes.ok) throw new Error("Google Places API failed");
-            const searchData = await searchRes.json();
-
-            if (!searchData.places || !searchData.places.length) throw new Error("No restaurant or cafe found matching this name worldwide.");
-
-            placeId = searchData.places[0].id;
-
-            const detRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,rating,userRatingCount,reviews,photos,regularOpeningHours,internationalPhoneNumber,websiteUri,businessStatus&key=${GOOGLE_PLACES_API_KEY}`);
-            if (!detRes.ok) throw new Error("Failed to fetch detailed data for the restaurant");
-
-            const detData = await detRes.json();
-
-            details = {
-                name: detData.displayName?.text || bName,
-                formatted_address: detData.formattedAddress || bLoc,
-                rating: detData.rating || 0,
-                user_ratings_total: detData.userRatingCount || 0,
-                reviews: (detData.reviews || []).map(r => ({
-                    author_name: r.authorAttribution?.displayName || "Google User",
-                    rating: r.rating || 0,
-                    text: r.text?.text || "No text provided.",
-                    time: r.publishTime ? Math.floor(new Date(r.publishTime).getTime() / 1000) : Math.floor(Date.now() / 1000)
-                }))
-            };
-
-            // Pad API response up to 10 reviews if it comes back short
-            if (details.reviews.length < 10) {
-                const needed = 10 - details.reviews.length;
-                details.reviews = [...details.reviews, ...fullMockReviews.slice(0, needed)];
-            }
-        } catch (apiErr) {
-            console.warn("API Search failed. Bubbling up error instead of falling back to mock data.", apiErr);
-            throw apiErr;
-        }
-
-        const branchRef = await addDoc(collection(db, "branches"), {
-            name: details.name, location: bLoc, managerId: currentUser.uid, placeId: placeId, status: "active",
-            totalReviews: details.user_ratings_total || 0, averageRating: details.rating || 0, createdAt: serverTimestamp()
-        });
-
-        if (details.reviews && details.reviews.length > 0) {
-            for (const r of details.reviews) {
-                await addDoc(collection(db, "reviews"), {
-                    branchId: branchRef.id, source: "google", externalReviewId: `${r.author_name}_${r.time * 1000}`,
-                    authorName: r.author_name, rating: r.rating, reviewText: r.text || "No text provided.",
-                    sentiment: r.rating > 3 ? 'positive' : r.rating === 3 ? 'neutral' : 'negative',
-                    status: r.rating <= 2 ? "critical" : "normal", responseStatus: "pending",
-                    externalTimestamp: r.time * 1000, syncedAt: serverTimestamp(), createdAt: serverTimestamp()
-                });
-            }
-        }
-
-        await initDataFetch();
-        document.getElementById('branchSelector').value = branchRef.id;
-        renderDashboard();
-        addMod.classList.add('hidden');
-    } catch (e) { err.textContent = e.message; err.classList.remove('hidden'); }
-
-    btn.disabled = false; btn.innerHTML = og;
-};
+            await updateDoc(doc(db, "reviews", id), { responseStatus: "responded" });
+            allReviews.find(r => r.id === id).responseStatus = 'responded';
+            renderDashboard();
+            closeReplyModal();
+        } catch (e) { alert("Error saving response: " + e.message); }
+        btn.disabled = false; btn.innerHTML = og;
+    };
+}
