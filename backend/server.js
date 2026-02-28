@@ -2,24 +2,31 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
+const axios = require('axios');
 
-// ---------------------------------------------------------------------------
-// REQUIRED SETUP FOR THE HACKATHON LIVE SEARCH FEATURE
-// In a real production environment, you would use a serviceAccountKey.json file:
-// const serviceAccount = require('./serviceAccountKey.json');
-// admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-// const db = admin.firestore();
-//
-// Since we don't have that locally, the backend endpoints relying on Firestore insertions
-// will act as realistic "pass-through mock" structures. If running this backend for real,
-// you MUST initialize `admin` properly above!
-// ---------------------------------------------------------------------------
+// Require routes from the incoming modular backend
+const authRoutes = require('./modules/auth/authRoutes');
+const branchRoutes = require('./modules/branches/branchRoutes');
+const staffRoutes = require('./modules/staff/staffRoutes');
+const reviewRoutes = require('./modules/reviews/reviewRoutes');
+const responseRoutes = require('./modules/responses/responseRoutes');
 
 const app = express();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || "DUMMY_API_KEY";
+
+// ---------------------------------------------------------------------------
+// Modular Routes (from remote branch)
+// ---------------------------------------------------------------------------
+app.use('/auth', authRoutes);
+app.use('/branches', branchRoutes);
+app.use('/staff', staffRoutes);
+app.use('/reviews', reviewRoutes);
+app.use('/responses', responseRoutes);
 
 // ---------------------------------------------------------------------------
 // Route: /api/sync-reviews
@@ -252,8 +259,22 @@ app.post('/api/search-and-add', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`ReviewIQ Backend Sync Service running on port ${PORT}`);
-    console.log(`Ready to accept Google Places API sync requests.`);
+// Error handling middleware (catch-all)
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Internal Server Error',
+        code: err.status || 500
+    });
 });
+
+const PORT = process.env.PORT || 8000;
+
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+module.exports = app;
