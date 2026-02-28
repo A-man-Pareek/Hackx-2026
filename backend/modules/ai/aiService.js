@@ -1,16 +1,14 @@
-const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getReviewAnalysisPrompt } = require('./promptTemplates');
 
-// Lazy initialize OpenAI client to ensure safety around missing env vars if not used directly
-let openaiClient = null;
+// Lazy initialize Gemini client to ensure safety around missing env vars
+let genAI = null;
 
-const getOpenAIClient = () => {
-    if (!openaiClient) {
-        openaiClient = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        });
+const getGenAIClient = () => {
+    if (!genAI) {
+        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     }
-    return openaiClient;
+    return genAI;
 };
 
 /**
@@ -20,32 +18,34 @@ const getOpenAIClient = () => {
  */
 const analyzeReview = async (reviewText) => {
     // 1. Validate environment
-    if (!process.env.OPENAI_API_KEY) {
-        console.warn('AI Service Warning: OPENAI_API_KEY is not defined. Falling back.');
+    if (!process.env.GEMINI_API_KEY) {
+        console.warn('AI Service Warning: GEMINI_API_KEY is not defined. Falling back.');
         return null;
     }
 
     try {
-        const openai = getOpenAIClient();
-        const prompt = getReviewAnalysisPrompt(reviewText);
+        const client = getGenAIClient();
+        const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const promptConfig = getReviewAnalysisPrompt(reviewText);
 
-        // 2. Wrap openAI request in a 5 second Promise raced against a rejection timer
+        // 2. Wrap Gemini request in a 5 second Promise raced against a rejection timer
         const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('OpenAI Timeout Exceeded 5000ms')), 5000)
+            setTimeout(() => reject(new Error('Gemini Timeout Exceeded 5000ms')), 5000)
         );
 
-        const aiPromise = openai.chat.completions.create({
-            model: 'gpt-4o-mini', // Performant text parsing, use GPT-3.5 or GPT-4o-mini as fit
-            messages: prompt.messages,
-            temperature: prompt.temperature,
-            response_format: { type: 'json_object' } // Enforce valid JSON structure
+        const aiPromise = model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: promptConfig.prompt }] }],
+            generationConfig: {
+                temperature: promptConfig.temperature,
+                responseMimeType: 'application/json'
+            }
         });
 
-        // Race to enforce stringent timing (e.g Webhooks processing)
-        const response = await Promise.race([aiPromise, timeoutPromise]);
+        // Race to enforce stringent timing
+        const responseResult = await Promise.race([aiPromise, timeoutPromise]);
 
         // 3. Extract and safely parse
-        const content = response.choices[0].message.content;
+        const content = responseResult.response.text();
         const parsedResult = JSON.parse(content);
 
         // 4. Validate output schema conceptually
