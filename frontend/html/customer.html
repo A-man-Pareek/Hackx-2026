@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReviewIQ - Customer Explorer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Link Custom CSS -->
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+
+<body class="flex flex-col h-screen overflow-hidden bg-background">
+
+    <!-- Top Navigation -->
+    <header class="h-16 flex items-center justify-between px-6 lg:px-8 z-10 shrink-0"
+        style="background: var(--surface-light); border-bottom: 1px solid var(--surface-border); backdrop-filter: blur(12px);">
+        <div class="flex items-center">
+            <div class="text-white p-1.5 rounded-lg mr-3 shadow-sm" style="background-color: var(--brand-orange-dark);">
+                <i class="fa-solid fa-utensils text-lg"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-white">Review<span
+                    style="color: var(--brand-orange-light);">IQ</span>
+                <span class="text-sm font-medium text-gray-400 ml-2">Customer Portal</span>
+            </h1>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 p-1.5 rounded-full pr-4"
+                style="background: rgba(255,255,255,0.05); border: 1px solid var(--surface-border);">
+                <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=f59e0b&color=fff"
+                    class="w-8 h-8 rounded-full shadow-sm">
+                <p id="userNameDisplay" class="text-sm font-semibold text-gray-200 hidden sm:block">Loading...</p>
+            </div>
+            <button id="logoutBtn" title="Sign Out"
+                class="w-9 h-9 rounded-full flex items-center justify-center transition hover:border-red-500 hover:text-red-500"
+                style="background: transparent; border: 1px solid var(--surface-border); color: var(--text-muted);">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto w-full no-scrollbar relative flex flex-col md:flex-row">
+
+        <!-- Left Panel: Restaurant List -->
+        <div class="w-full md:w-1/3 lg:w-1/4 h-full flex flex-col z-10 shrink-0"
+            style="background: var(--surface-light); border-right: 1px solid var(--surface-border); backdrop-filter: blur(12px);">
+            <div class="p-6" style="border-bottom: 1px solid var(--surface-border);">
+                <h2 class="text-lg font-bold text-white mb-4 tracking-tight">Discover Places</h2>
+                <div class="relative">
+                    <i
+                        class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="restaurantSearch" placeholder="Search by name or city..."
+                        class="w-full text-sm font-medium rounded-xl pl-9 pr-3 py-2.5 transition"
+                        style="background: rgba(0,0,0,0.5); border: 1px solid var(--surface-border); color: #fff;">
+                </div>
+            </div>
+            <div id="restaurantList" class="flex-1 overflow-y-auto p-4 space-y-3 relative no-scrollbar">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Right Panel: Unified Review Feed -->
+        <div class="flex-1 h-full bg-background relative flex flex-col">
+            <!-- Header for feed -->
+            <div class="px-8 py-6 sticky top-0 z-10 flex justify-between items-end"
+                style="background: var(--surface-light); border-bottom: 1px solid var(--surface-border); backdrop-filter: blur(12px);">
+                <div>
+                    <h2 id="feedTitle" class="text-2xl font-bold text-white tracking-tight">Global Review Feed</h2>
+                    <p id="feedSubtitle" class="text-sm font-medium mt-1" style="color: var(--text-muted);">See what
+                        people are saying
+                        everywhere.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="resetFeedBtn" class="hidden text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+                        style="color: var(--brand-orange-light); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);">
+                        <i class="fa-solid fa-earth-americas mr-1"></i> View All
+                    </button>
+                    <select id="sortReviews"
+                        class="appearance-none text-xs font-semibold rounded-lg pl-3 pr-8 py-2 transition"
+                        style="background: rgba(0,0,0,0.5); border: 1px solid var(--surface-border); color: #fff; cursor: pointer;">
+                        <option value="newest">Newest First</option>
+                        <option value="highest">Highest Rating</option>
+                        <option value="lowest">Lowest Rating</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Review Feed Content -->
+            <div class="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full no-scrollbar relative">
+                <div id="reviewsFeed" class="space-y-6">
+                    <!-- Injected via JS -->
+                    <div class="text-center py-20">
+                        <i class="fa-solid fa-spinner fa-spin text-4xl mb-4" style="color: var(--brand-orange);"></i>
+                        <p class="font-medium" style="color: var(--text-muted);">Loading reviews...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Review Template -->
+    <template id="reviewCardTemplate">
+        <div class="glass-card p-6 flex flex-col gap-4 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-1 h-full sentiment-indicator transition-colors"
+                style="background-color: var(--surface-border);"></div>
+            <div class="flex justify-between items-start gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full text-white flex items-center justify-center font-bold text-lg shadow-sm author-initial"
+                        style="background: linear-gradient(135deg, var(--brand-orange-dark), var(--brand-orange));">
+                        A
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-white text-base author-name tracking-tight">Author Name</h4>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <div class="flex text-yellow-500 text-xs rating-stars gap-0.5">
+                                <!-- Stars -->
+                            </div>
+                            <span class="text-xs font-medium review-time" style="color: var(--text-muted);">&bull; 2
+                                days ago</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm"
+                        style="background: rgba(0,0,0,0.3); color: var(--text-muted); border: 1px solid var(--surface-border);">
+                        <i class="fa-brands fa-google text-blue-500"></i> Google
+                    </span>
+                </div>
+            </div>
+
+            <div class="pl-13">
+                <p class="text-sm leading-relaxed review-text font-medium relative z-10" style="color: #e7e5e4;">
+                    Review text goes here.
+                </p>
+                <div class="mt-4 pt-4 flex items-center justify-between"
+                    style="border-top: 1px solid var(--surface-border);">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-location-dot text-xs" style="color: var(--text-muted);"></i>
+                        <span
+                            class="text-xs font-bold uppercase tracking-wide branch-name cursor-pointer transition hover:text-[#f59e0b]"
+                            style="color: var(--text-muted);">Branch
+                            Name</span>
+                    </div>
+                    <div
+                        class="ai-sentiment-chip hidden bg-emerald-900/40 text-emerald-400 border border-emerald-800 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full items-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Positive
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script type="module" src="../js/customer.js"></script>
+</body>
+
+</html>
