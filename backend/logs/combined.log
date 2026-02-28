@@ -102,3 +102,6 @@
 {"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-02-28 20:33:19"}
 {"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-02-28 20:33:19"}
 {"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-02-28 20:33:19"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: qaSNJf1OesVg8ob7oSDnyjlwwwY2 | Target: user:qaSNJf1OesVg8ob7oSDnyjlwwwY2","service":"hackx-backend","timestamp":"2026-02-28 21:58:36"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: oNhcHTqfhzSfYadgtlkmQd4Xpyo1 | Target: user:oNhcHTqfhzSfYadgtlkmQd4Xpyo1","service":"hackx-backend","timestamp":"2026-02-28 21:59:56"}
+{"level":"info","message":"[AUDIT] Action: USER_REGISTERED | Actor: 0f0gAYCDJ1XZ5vlvLONqxTvk8X43 | Target: user:0f0gAYCDJ1XZ5vlvLONqxTvk8X43","service":"hackx-backend","timestamp":"2026-02-28 23:10:41"}
