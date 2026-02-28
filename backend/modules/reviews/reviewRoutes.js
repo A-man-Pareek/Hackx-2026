@@ -1,0 +1,31 @@
+const express = require('express');
+const router = express.Router();
+
+const { authenticate } = require('../auth/authMiddleware');
+// Depending on architecture, review creation might be public (from external site) or private.
+// For now, protecting to adhere to general backend rules.
+const reviewController = require('./reviewController');
+
+/**
+ * @route   GET /reviews
+ * @desc    Fetch reviews safely isolated by branch
+ * @access  Private
+ */
+router.get(
+    '/',
+    authenticate,
+    reviewController.getReviews
+);
+
+/**
+ * @route   POST /reviews
+ * @desc    Submit a new review
+ * @access  Private 
+ */
+router.post(
+    '/',
+    authenticate,
+    reviewController.createReview
+);
+
+module.exports = router;
