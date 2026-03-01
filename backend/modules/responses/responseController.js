@@ -82,7 +82,8 @@ const createResponse = async (req, res) => {
         batch.update(reviewRef, {
             responseStatus: 'responded',
             responseTimeMinutes: responseTimeMinutes,
-            respondedAt: respondedAt.toISOString()
+            respondedAt: respondedAt.toISOString(),
+            aiReply: responseText
         });
 
         await batch.commit();

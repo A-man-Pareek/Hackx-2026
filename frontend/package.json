@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "axios": "^1.13.6",
+    "jsonwebtoken": "^9.0.3"
+  }
+}

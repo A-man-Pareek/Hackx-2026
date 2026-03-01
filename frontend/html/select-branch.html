@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReviewIQ - Select Restaurant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#f59e0b', 600: '#d97706', 700: '#b45309', 900: '#78350f' },
+                        surface: '#ffffff', background: '#0c0a09',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0c0a09;
+            color: #f8fafc;
+        }
+
+        .glass-card {
+            background: rgba(28, 25, 23, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(68, 64, 60, 0.4);
+            border-radius: 12px;
+        }
+
+        .glass-card:hover {
+            border-color: #f59e0b;
+        }
+
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body
+    class="flex flex-col h-screen overflow-hidden bg-[url('https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&q=80')] bg-cover bg-center">
+    <div class="absolute inset-0 bg-gray-900/80 backdrop-blur-md"></div>
+
+    <div class="relative z-10 flex flex-col h-full overflow-y-auto py-12 px-6 items-center w-full">
+        <!-- Header -->
+        <div class="text-center mb-10 w-full max-w-4xl">
+            <div
+                class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-500/20 text-brand-500 mb-6 shadow-lg border border-brand-500/30">
+                <i class="fa-solid fa-store text-3xl"></i>
+            </div>
+            <h1 class="text-4xl font-extrabold text-white tracking-tight mb-4">Select Your Restaurant</h1>
+            <p class="text-gray-300 font-medium max-w-2xl mx-auto">Choose an existing branch to manage or add a new
+                restaurant from Google Places.</p>
+        </div>
+
+        <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Existing Branches Column -->
+            <div class="glass-card p-6 flex flex-col h-[500px]">
+                <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-building text-brand-500"></i> Your Branches
+                </h3>
+                <div id="loadingBranches"
+                    class="text-gray-400 text-sm py-4 flex flex-col items-center justify-center h-full">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl mb-3 text-brand-500"></i>
+                    Checking your profile...
+                </div>
+                <!-- Dynamic Branch List -->
+                <div id="existingBranchesList" class="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar hidden">
+                    <!-- Cards injected by JS -->
+                </div>
+                <div id="noBranchesState"
+                    class="hidden text-center py-8 flex-col items-center justify-center h-full text-gray-400">
+                    <i class="fa-solid fa-store-slash text-4xl mb-4 text-gray-600"></i>
+                    <p class="text-sm">No branches linked to your account.</p>
+                    <p class="text-xs mt-2">Please add one using the search form.</p>
+                </div>
+            </div>
+
+            <!-- Add New Branch Column -->
+            <div class="glass-card p-6 flex flex-col justify-start h-[500px]">
+                <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-emerald-500"></i> Add New Restaurant
+                </h3>
+                <p class="text-sm text-gray-400 mb-6">Search Google Places to instantly link your business and import
+                    public reviews.</p>
+
+                <form id="addRestaurantForm" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-1.5">Business / Restaurant
+                            Name</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-store absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                            <input type="text" id="searchName"
+                                class="w-full bg-black/50 border border-gray-600 rounded-xl pl-11 pr-4 py-3 text-white focus:border-brand-500 focus:outline-none transition"
+                                placeholder="e.g. The Rustic Spoon" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-1.5">City / Location</label>
+                        <div class="relative">
+                            <i
+                                class="fa-solid fa-location-dot absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                            <input type="text" id="searchLocation"
+                                class="w-full bg-black/50 border border-gray-600 rounded-xl pl-11 pr-4 py-3 text-white focus:border-brand-500 focus:outline-none transition"
+                                placeholder="e.g. San Francisco, CA" required>
+                        </div>
+                    </div>
+
+                    <div id="addRestaurantError"
+                        class="hidden text-xs text-red-400 bg-red-900/30 p-3 rounded-xl border border-red-800"></div>
+                    <div id="addRestaurantSuccess"
+                        class="hidden text-xs text-emerald-400 bg-emerald-900/30 p-3 rounded-xl border border-emerald-800">
+                    </div>
+
+                    <button type="submit" id="submitAddBtn"
+                        class="w-full py-3.5 bg-brand-600 hover:bg-brand-500 active:scale-[0.98] rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20">
+                        <i class="fa-solid fa-magnifying-glass"></i> Search & Integrate
+                    </button>
+
+                    <!-- Progress Container -->
+                    <div id="addRestaurantProgress" class="hidden mt-4 space-y-2">
+                        <div class="flex justify-between text-xs font-semibold text-gray-300">
+                            <span id="progressText">Checking Google Places...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-700/50 rounded-full h-2">
+                            <div id="progressBar" class="bg-emerald-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+
+        <div class="mt-8 text-center w-full max-w-4xl">
+            <button id="logoutBtn"
+                class="text-gray-400 hover:text-white transition text-sm flex items-center gap-2 mx-auto justify-center">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out and return to Login
+            </button>
+        </div>
+    </div>
+    <script type="module" src="../js/select-branch.js"></script>
+</body>
+
+</html>

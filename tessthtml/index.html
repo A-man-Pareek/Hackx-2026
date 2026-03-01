@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReviewIQ - Enterprise Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' },
+                        sentiment: { positive: '#10B981', neutral: '#F59E0B', negative: '#EF4444' },
+                        surface: '#ffffff', background: '#f8fafc',
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                        'border': '0 0 0 1px rgba(226, 232, 240, 1)'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+
+<body class="flex h-screen overflow-hidden relative">
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay"
+        class="fixed inset-0 bg-[#0c0a09] bg-opacity-95 z-50 flex flex-col items-center justify-center p-4 transition-opacity duration-300">
+        <div class="glass-card w-full max-w-md p-8 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-orange-dark to-brand-orange"></div>
+            <div
+                class="bg-[#1c1917] text-brand-orange w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-6 border border-[#292524] shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                <i class="fa-solid fa-chart-line text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-2">ReviewIQ</h1>
+            <p class="text-[#a8a29e] text-sm mb-8">Sign in with your authorized Google account to access the enterprise
+                dashboard.</p>
+            <button id="googleSignInBtn"
+                class="w-full bg-[#1c1917] border border-[#44403c] hover:bg-[#292524] text-white font-medium py-3 px-4 rounded-xl transition flex items-center justify-center gap-3 shadow-sm hover:border-brand-orange hover:shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo"
+                    class="w-5 h-5">
+                Sign in with Google
+            </button>
+            <div id="loginError"
+                class="hidden mt-4 text-sm text-red-400 font-medium bg-red-900/30 p-3 rounded-lg border border-red-800">
+                Authentication failed. Please try again.
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN WORKSPACE -->
+    <div id="appWorkspace" class="flex h-full w-full hidden opacity-0 transition-opacity duration-500">
+        <!-- 📌 SIDEBAR NAVIGATION -->
+        <aside
+            class="w-64 bg-surface border-r border-gray-200 flex flex-col justify-between hidden md:flex shrink-0 z-20">
+            <div>
+                <!-- Logo -->
+                <div class="h-16 flex items-center px-6 border-b border-gray-100">
+                    <div class="bg-brand-600 text-white p-1.5 rounded-lg mr-3 shadow-sm">
+                        <i class="fa-solid fa-chart-line text-lg"></i>
+                    </div>
+                    <h1 class="text-xl font-bold tracking-tight text-gray-900">Review<span
+                            class="text-brand-600">IQ</span></h1>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="p-4 space-y-1 mt-2">
+                    <button data-target="tab-overview"
+                        class="tab-btn w-full text-left nav-item active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fa-solid fa-house w-5 text-gray-400"></i> Dashboard Overview
+                    </button>
+                    <button data-target="tab-inbox"
+                        class="tab-btn w-full text-left nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fa-solid fa-comments w-5 text-gray-400"></i> Inbox & Responses
+                        <span id="sidebar-critical-count"
+                            class="ml-auto bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs font-bold">0</span>
+                    </button>
+                    <button data-target="tab-analytics"
+                        class="tab-btn w-full text-left nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fa-solid fa-store w-5 text-gray-400"></i> Analytics
+                    </button>
+                    <button data-target="tab-monthly-overview"
+                        class="tab-btn w-full text-left nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition group">
+                        <i class="fa-solid fa-robot w-5 text-brand-500 group-hover:scale-110 transition-transform"></i>
+                        Monthly AI Overview
+                    </button>
+                    <!-- Staff Analytics tab merged into Analytics as requested -->
+                    <div class="pt-4 mt-4 border-t border-gray-100">
+                        <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Integrations
+                        </p>
+                        <button id="openAddRestaurantBtn"
+                            class="hidden w-full text-left nav-item flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition group">
+                            <i class="fa-brands fa-google w-5 text-gray-400 group-hover:text-blue-500"></i> Add
+                            Restaurant & Sync <span class="ml-auto w-2 h-2 bg-green-500 rounded-full"></span>
+                        </button>
+                    </div>
+                </nav>
+            </div>
+
+            <!-- User Profile Bottom -->
+            <div class="p-4 border-t border-gray-200 flex items-center justify-between">
+                <div class="flex items-center gap-3 w-full p-2 rounded-lg">
+                    <img id="userAvatar" src="https://ui-avatars.com/api/?name=Loading&background=1d4ed8&color=fff"
+                        class="w-9 h-9 rounded-full ring-2 ring-white">
+                    <div class="flex-1 min-w-0">
+                        <p id="userNameDisplay" class="text-sm font-semibold text-gray-900 truncate">Loading...</p>
+                        <p id="userRoleDisplay" class="text-[10px] text-gray-500 font-semibold uppercase truncate">ROLE
+                            • All Branches</p>
+                    </div>
+                </div>
+                <button id="logoutBtn" title="Sign Out" class="text-gray-400 hover:text-red-500 transition px-2"><i
+                        class="fa-solid fa-arrow-right-from-bracket"></i></button>
+            </div>
+        </aside>
+
+        <!-- 📌 MAIN CONTENT WORKSPACE -->
+        <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+
+            <!-- Top Nav Header -->
+            <header
+                class="h-16 bg-surface border-b border-gray-200 flex items-center justify-between px-6 lg:px-8 z-10 shrink-0">
+                <button class="md:hidden text-gray-500 hover:text-gray-700"><i
+                        class="fa-solid fa-bars text-xl"></i></button>
+
+                <!-- Global Search & Filters -->
+                <div class="hidden md:flex items-center gap-4 flex-1">
+                    <div class="relative w-96">
+                        <i
+                            class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" id="globalSearchInput" placeholder="Search reviews, staff, or branches..."
+                            class="w-full bg-gray-50 border border-gray-200 text-sm rounded-lg pl-9 pr-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm">
+                    </div>
+                    <div class="h-6 w-px bg-gray-200 mx-2"></div>
+
+                    <!-- Active Restaurant Display -->
+                    <div id="activeRestaurantDisplay"
+                        class="flex flex-col cursor-pointer hover:bg-gray-800 p-2 rounded-lg transition"
+                        title="Click to view/switch restaurant">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-store text-brand-500"></i>
+                            <h3 id="topNavRestaurantName" class="text-sm font-bold text-white leading-tight">Select
+                                Restaurant</h3>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-gray-500"></i>
+                        </div>
+                        <p id="topNavRestaurantLoc" class="text-[10px] text-gray-400 font-medium pl-6">Waiting...</p>
+                    </div>
+
+                    <!-- Date Filter -->
+                    <div class="relative">
+                        <select
+                            class="appearance-none bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm cursor-pointer hover:bg-gray-50">
+                            <option>📅 Last 30 Days</option>
+                        </select>
+                        <i
+                            class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <!-- Right Actions -->
+                <div class="flex items-center gap-3">
+                    <button
+                        class="w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 shadow-sm relative"><i
+                            class="fa-regular fa-bell"></i><span
+                            class="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span></button>
+                </div>
+            </header>
+
+            <!-- Main Scrollable Area -->
+            <div class="flex-1 overflow-y-auto p-6 lg:p-8 no-scrollbar">
+
+                <div class="mb-8 flex justify-between items-end">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Enterprise Overview</h2>
+                        <p class="text-sm text-gray-500 mt-1">Aggregating data from Google Places & Internal Feedback.
+                        </p>
+                    </div>
+                    <div
+                        class="flex items-center gap-2 text-xs font-medium text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                        <i class="fa-solid fa-rotate text-brand-500"></i> Auto-synced 2 mins ago
+                    </div>
+                </div>
+
+                <!-- TABS CONTAINER -->
+                <div id="tab-overview" class="tab-pane block">
+                    <!-- TOP GRAPHS (Reviews & Branches) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+                        <!-- Review Volume Trend Graph -->
+                        <div class="glass-card p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 class="font-bold text-gray-900">Review Volume Trend</h3>
+                                    <p class="text-xs text-gray-500">7 Day timeline</p>
+                                </div>
+                            </div>
+                            <div class="flex-1 relative w-full" style="min-height: 250px;">
+                                <canvas id="sentimentTrendChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Brand Performance (Rating by Branch) Graph -->
+                        <div class="glass-card p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 class="font-bold text-gray-900">Ratings by Branch</h3>
+                                    <p class="text-xs text-gray-500">Average Review Rating</p>
+                                </div>
+                            </div>
+                            <div class="flex-1 relative w-full" style="min-height: 250px;">
+                                <canvas id="branchBarChart"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ABOUT LOCATION CARD (Single Context) -->
+                    <div class="glass-card flex flex-col overflow-hidden relative group mb-8">
+                        <div id="locationHeaderImg"
+                            class="h-40 w-full bg-gray-200 bg-cover bg-center border-b border-[#292524] transition-transform duration-700 group-hover:scale-105"
+                            style="background-image: url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80');">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0c0a09]/90 to-transparent h-40"></div>
+                            <div class="absolute top-4 right-4 z-10">
+                                <span id="locationStatusBadge"
+                                    class="bg-emerald-500/90 backdrop-blur text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border border-emerald-400 capitalize">Operational</span>
+                            </div>
+                        </div>
+                        <div
+                            class="p-6 flex-1 flex flex-col relative bg-[#1c1917]/80 backdrop-blur-md z-10 -mt-2 rounded-t-2xl border-t border-[#44403c]">
+                            <div class="mb-5 flex justify-between items-start">
+                                <div>
+                                    <h3 id="locationBrandName"
+                                        class="text-xl font-extrabold text-white tracking-tight leading-tight">Location
+                                        Overview</h3>
+                                    <p class="text-sm text-gray-400 mt-1 flex items-start gap-1">
+                                        <i class="fa-solid fa-location-dot mt-1 text-brand-orange"></i>
+                                        <span id="locationAddressFull">Fetching address details...</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-auto border-t border-[#292524] pt-5">
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-blue-900/50 text-blue-400 border border-blue-800 flex items-center justify-center shrink-0">
+                                            <i class="fa-solid fa-phone"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-500 font-medium tracking-wide uppercase">Contact
+                                            </p>
+                                            <p id="locationPhone" class="font-semibold text-gray-200">No phone provided
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-purple-900/50 text-purple-400 border border-purple-800 flex items-center justify-center shrink-0">
+                                            <i class="fa-solid fa-globe"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-500 font-medium tracking-wide uppercase">Website
+                                            </p>
+                                            <a id="locationWebsite" href="#" target="_blank"
+                                                class="font-semibold text-brand-500 hover:text-brand-400 truncate block w-40">Not
+                                                available</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-start gap-3 text-sm">
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-amber-900/50 text-brand-orange border border-brand-orange-dark flex items-center justify-center shrink-0">
+                                            <i class="fa-regular fa-clock"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-500 font-medium tracking-wide uppercase">Today's
+                                                Hours</p>
+                                            <p id="locationHours"
+                                                class="font-semibold text-gray-300 whitespace-pre-line leading-relaxed text-xs">
+                                                Hours unknown</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BOTTOM ROW (Sentiment Doughnut) -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <!-- Doughnut -->
+                        <div class="glass-card p-6 flex flex-col items-center col-span-1 border border-white/5">
+                            <div class="w-full flex justify-between items-center mb-6">
+                                <h3 class="font-bold text-gray-900">Sentiment Breakdown</h3>
+                            </div>
+                            <div class="relative w-48 h-48">
+                                <canvas id="sentimentDoughnut"></canvas>
+                                <div
+                                    class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span id="doughnut-center" class="text-3xl font-bold text-gray-900">0%</span>
+                                    <span class="text-xs text-gray-500 font-medium">Positive</span>
+                                </div>
+                            </div>
+                            <div class="w-full mt-6 space-y-2">
+                                <div class="flex justify-between items-center text-sm">
+                                    <div class="flex items-center gap-2"><span
+                                            class="w-3 h-3 rounded-full bg-emerald-500"></span><span
+                                            class="font-medium text-gray-700">Positive</span></div>
+                                    <span id="doughnut-pos" class="font-bold">0</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <div class="flex items-center gap-2"><span
+                                            class="w-3 h-3 rounded-full bg-amber-400"></span><span
+                                            class="font-medium text-gray-700">Neutral</span></div>
+                                    <span id="doughnut-neu" class="font-bold">0</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <div class="flex items-center gap-2"><span
+                                            class="w-3 h-3 rounded-full bg-red-500"></span><span
+                                            class="font-medium text-gray-700">Negative</span></div>
+                                    <span id="doughnut-neg" class="font-bold">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Insights Panel -->
+                        <div
+                            class="glass-card p-6 md:col-span-2 bg-gradient-to-br from-indigo-900 to-brand-900 text-white shadow-lg relative overflow-hidden flex flex-col justify-center border-none">
+                            <div
+                                class="absolute -top-24 -right-24 w-48 h-48 bg-brand-500 rounded-full blur-3xl opacity-50">
+                            </div>
+                            <div class="relative z-10">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-brand-300"></i>
+                                    <h3 class="font-bold text-sm uppercase tracking-wider text-brand-100">AI Insights
+                                    </h3>
+                                </div>
+                                <p class="text-lg font-medium leading-relaxed mb-4">"Based on recent reviews, customers
+                                    highly praise the atmospheric lighting and food quality, but there's a slight
+                                    increase in critical feedback regarding service speed during weekend peaks."</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-reports" class="tab-pane hidden">
+                    <!-- Old content moved to tab-overview -->
+                </div>
+
+                <div id="tab-performance" class="tab-pane hidden">
+                    <!-- Hardcoded Top Performing Table -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div class="glass-card p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="font-bold text-gray-900">Top Performing Branches 🏆</h3>
+                                    <p class="text-xs text-gray-500">Ranked by combined metrics formula</p>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr
+                                            class="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                                            <th class="pb-3 font-semibold">Rank & Branch</th>
+                                            <th class="pb-3 font-semibold text-center">Avg Rating</th>
+                                            <th class="pb-3 font-semibold text-center">Positive %</th>
+                                            <th class="pb-3 font-semibold text-right">Performance Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="performanceTableBody" class="text-sm">
+                                        <!-- Injected by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-inbox" class="tab-pane hidden">
+                    <!-- 4️⃣ REVIEW MANAGEMENT TABLE -->
+                    <div class="glass-card overflow-hidden mb-12">
+                        <div
+                            class="p-5 border-b border-[#292524] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-gray-900 text-lg">Recent Reviews Inbox</h3>
+                                <p id="critical-subtitle-table"
+                                    class="text-xs text-gray-500 cursor-pointer text-brand-600 hover:underline">0
+                                    Critical
+                                    issues pending response</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button type="button" id="bulkAiReplyBtn"
+                                    class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-lg text-xs font-semibold transition flex items-center gap-2 shadow-sm">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Reply All Pending
+                                </button>
+                                <!-- Filters -->
+                                <div class="relative">
+                                    <select id="filterStatus"
+                                        class="appearance-none bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-lg pl-3 pr-7 py-2 focus:outline-none focus:border-brand-500 shadow-sm cursor-pointer hover:bg-gray-50">
+                                        <option>Status: All</option>
+                                        <option>Status: Critical</option>
+                                        <option>Status: Normal</option>
+                                    </select>
+                                    <i
+                                        class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] pointer-events-none"></i>
+                                </div>
+                                <div class="relative">
+                                    <select id="filterSentiment"
+                                        class="appearance-none bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-lg pl-3 pr-7 py-2 focus:outline-none focus:border-brand-500 shadow-sm cursor-pointer hover:bg-gray-50">
+                                        <option>Sentiment: All</option>
+                                        <option>Sentiment: Positive</option>
+                                        <option>Sentiment: Negative</option>
+                                        <option>Sentiment: Neutral</option>
+                                    </select>
+                                    <i
+                                        class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] pointer-events-none"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Table Content -->
+                        <div class="overflow-x-auto relative">
+                            <table class="w-full text-left">
+                                <thead class="bg-[#1c1917]/50 border-b border-[#292524]">
+                                    <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th class="p-4 w-60">Customer & Rating</th>
+                                        <th class="p-4">Review Preview</th>
+                                        <th class="p-4 w-32">Branch & Staff</th>
+                                        <th class="p-4 w-32">Status</th>
+                                        <th class="p-4 w-28 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reviewsTableBody" class="divide-y divide-[#292524] text-sm">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                            <div id="emptyState"
+                                class="hidden text-center py-12 w-full bg-[#1c1917]/80 backdrop-blur-sm absolute top-12 left-0 h-full z-10">
+                                <i class="fa-regular fa-folder-open text-4xl text-gray-400 mb-3"></i>
+                                <h3 class="text-lg font-medium text-gray-900">No reviews found</h3>
+                                <p class="text-sm text-gray-500 mt-1">Try adjusting your filters or selecting a
+                                    different
+                                    branch.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-analytics" class="tab-pane hidden">
+
+                    <!-- 1. Analytics KPIs -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="glass-card p-5 text-center flex flex-col justify-center">
+                            <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Total Reviews</p>
+                            <h3 id="analytics-total" class="text-3xl font-extrabold text-white">0</h3>
+                        </div>
+                        <div
+                            class="glass-card p-5 text-center flex flex-col justify-center border-b-4 border-emerald-500 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-emerald-500/5 pointer-events-none"></div>
+                            <p class="text-xs text-emerald-500 font-bold uppercase tracking-wider mb-2 relative z-10">
+                                Positive</p>
+                            <h3 id="analytics-pos" class="text-3xl font-extrabold text-white relative z-10">0</h3>
+                        </div>
+                        <div
+                            class="glass-card p-5 text-center flex flex-col justify-center border-b-4 border-amber-400 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-amber-400/5 pointer-events-none"></div>
+                            <p class="text-xs text-amber-500 font-bold uppercase tracking-wider mb-2 relative z-10">
+                                Neutral</p>
+                            <h3 id="analytics-neu" class="text-3xl font-extrabold text-white relative z-10">0</h3>
+                        </div>
+                        <div
+                            class="glass-card p-5 text-center flex flex-col justify-center border-b-4 border-red-500 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-red-500/5 pointer-events-none"></div>
+                            <p class="text-xs text-red-500 font-bold uppercase tracking-wider mb-2 relative z-10">
+                                Negative</p>
+                            <h3 id="analytics-neg" class="text-3xl font-extrabold text-white relative z-10">0</h3>
+                        </div>
+                    </div>
+
+                    <!-- 2. Sentiment Dashboard & Staff Analytics -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+                        <!-- High-Tech Pie/Doughnut Chart -->
+                        <div
+                            class="glass-card p-6 flex flex-col items-center justify-center bg-gradient-to-br from-[#1c1917] via-[#0c0a09] to-black border-[#292524] relative overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                            <!-- Background Glow -->
+                            <div
+                                class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-brand-900/30 via-transparent to-transparent opacity-60 pointer-events-none">
+                            </div>
+
+                            <h3
+                                class="font-bold text-gray-300 w-full mb-6 z-10 text-center tracking-widest uppercase text-xs">
+                                Sentiment Analysis</h3>
+                            <div class="relative w-56 h-56 mb-4 z-10 flex">
+                                <canvas id="analyticsPieChart"></canvas>
+                                <!-- Center Glow for Doughnut -->
+                                <div
+                                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-brand-500/20 rounded-full blur-[20px] pointer-events-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Staff Performance Table -->
+                        <div class="glass-card overflow-hidden lg:col-span-2">
+                            <div class="p-5 border-b border-[#292524] flex justify-between items-center">
+                                <h3 class="font-bold text-gray-900 text-lg">Staff Performance</h3>
+                                <button class="text-brand-600 text-sm font-semibold hover:underline">View All</button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead class="bg-[#1c1917]/50 border-b border-[#292524]">
+                                        <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                            <th class="p-4">Staff Member</th>
+                                            <th class="p-4 text-center">Mentions</th>
+                                            <th class="p-4 text-center">Avg Rating</th>
+                                            <th class="p-4 text-right">Sentiment Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="staffTableBody" class="divide-y divide-[#292524] text-sm">
+                                        <!-- Injected by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="tab-monthly-overview" class="tab-pane hidden">
+                    <div class="mb-8">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                                <i class="fa-solid fa-wand-magic-sparkles text-white text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-xl tracking-tight">AI Monthly Overview</h3>
+                                <p class="text-sm text-gray-400">Intelligently extracted insights from all recent
+                                    feedback.</p>
+                            </div>
+                            <button id="refreshAiInsightsBtn"
+                                class="ml-auto flex items-center gap-2 px-4 py-2 bg-[#1c1917] border border-[#292524] rounded-lg text-sm font-semibold text-gray-300 hover:bg-[#292524] transition shadow-sm">
+                                <i class="fa-solid fa-rotate-right text-brand-500"></i> Refresh Insights
+                            </button>
+                        </div>
+
+                        <!-- 1. AI Overview Summary -->
+                        <div class="glass-card p-6 mb-6 border-l-4 border-indigo-500 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-indigo-500/5 pointer-events-none"></div>
+                            <h4 class="font-bold text-white mb-3 flex items-center gap-2 relative z-10"><i
+                                    class="fa-solid fa-brain text-indigo-500"></i> Executive AI Summary</h4>
+                            <p id="ai-overview-text" class="text-gray-300 leading-relaxed text-sm relative z-10">
+                                Generating AI summary based on staff service, ambience, and overall customer
+                                satisfaction...
+                            </p>
+                        </div>
+
+                        <!-- 2. Top 5 Summaries (Pos and Neg) -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <!-- Top Positives -->
+                            <div class="glass-card p-6 bg-[#1c1917]/50">
+                                <h4
+                                    class="font-bold text-white mb-4 flex items-center gap-2 border-b border-[#292524] pb-3">
+                                    <i class="fa-solid fa-thumbs-up text-emerald-500"></i> Top 5 AI Positives
+                                </h4>
+                                <ul id="ai-positives-list" class="space-y-3">
+                                    <li class="flex items-start gap-3 text-sm text-gray-400"><i
+                                            class="fa-solid fa-spinner fa-spin text-emerald-400 mt-1"></i> Analyzing
+                                        positive feedback...</li>
+                                </ul>
+                            </div>
+
+                            <!-- Top Negatives -->
+                            <div class="glass-card p-6 bg-[#1c1917]/50">
+                                <h4
+                                    class="font-bold text-white mb-4 flex items-center gap-2 border-b border-[#292524] pb-3">
+                                    <i class="fa-solid fa-thumbs-down text-red-500"></i> Top 5 AI Negatives
+                                </h4>
+                                <ul id="ai-negatives-list" class="space-y-3">
+                                    <li class="flex items-start gap-3 text-sm text-gray-400"><i
+                                            class="fa-solid fa-spinner fa-spin text-red-400 mt-1"></i> Analyzing
+                                        negative feedback...</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div> <!-- End Workspace -->
+
+    <!-- Reply Modal -->
+    <div id="replyModal"
+        class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div
+            class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 m-4 transform transition-all border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900"><i class="fa-solid fa-reply text-brand-500 mr-2"></i>
+                    Respond to Review</h3>
+                <button type="button" id="closeModalBtn" class="text-gray-400 hover:text-gray-600 transition p-1"><i
+                        class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="mb-5 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-inner">
+                <p class="text-sm text-gray-700 italic font-medium leading-relaxed" id="modalReviewText">"Loading review
+                    text..."</p>
+            </div>
+            <form id="replyForm">
+                <input type="hidden" id="modalReviewId">
+                <div class="mb-5">
+                    <label for="replyMessage" class="block text-sm font-semibold text-gray-700 mb-2">Your AI-Assisted
+                        Response</label>
+                    <textarea id="replyMessage" rows="5"
+                        class="w-full bg-white border border-gray-300 rounded-xl p-3 text-sm focus:ring-brand-500 focus:border-brand-500 shadow-sm"
+                        placeholder="Type your response here or click 'Generate AI Response'..." required></textarea>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <button type="button" id="generateAiReplyBtn"
+                        class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-xl text-sm font-semibold transition flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI Reply
+                    </button>
+                    <div class="flex gap-3">
+                        <button type="button" id="cancelModalBtn"
+                            class="px-5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm">Cancel</button>
+                        <button type="submit" id="submitReplyBtn"
+                            class="px-5 py-2.5 bg-brand-600 rounded-xl text-sm font-semibold text-white hover:bg-brand-700 transition flex items-center gap-2 shadow-sm">
+                            <i class="fa-regular fa-paper-plane"></i> Send Reply
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Restaurant Modal -->
+    <div id="addRestaurantModal"
+        class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div
+            class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 m-4 transform transition-all border border-gray-200">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <i class="fa-brands fa-google text-blue-500"></i> Auto-Sync Location
+                </h3>
+                <button type="button" id="closeAddModalBtn" class="text-gray-400 hover:text-gray-600 transition p-1"><i
+                        class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <p class="text-sm text-gray-500 mb-6 leading-relaxed">Search for a business on Google Places to instantly
+                link it and import live public reviews.</p>
+            <form id="addRestaurantForm">
+                <div class="mb-4">
+                    <label for="searchName" class="block text-sm font-semibold text-gray-700 mb-1.5">Business / Location
+                        Name</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-store absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="searchName"
+                            class="w-full bg-white border border-gray-300 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:ring-brand-500 focus:border-brand-500 shadow-sm"
+                            placeholder="e.g. Starbucks" required>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label for="searchLocation" class="block text-sm font-semibold text-gray-700 mb-1.5">City or
+                        Neighborhood</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="searchLocation"
+                            class="w-full bg-white border border-gray-300 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:ring-brand-500 focus:border-brand-500 shadow-sm"
+                            placeholder="e.g. Manhattan, NY" required>
+                    </div>
+                </div>
+                <div id="addRestaurantError"
+                    class="hidden mb-4 text-xs font-semibold text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                    Failed to fetch.</div>
+                <button type="submit" id="submitAddBtn"
+                    class="w-full px-4 py-3 bg-brand-600 rounded-xl text-sm font-semibold text-white hover:bg-brand-700 transition flex justify-center items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-magnifying-glass"></i> Search & Sync Target
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Review Row Template -->
+    <template id="reviewRowTemplate">
+        <tr class="hover:bg-gray-50 transition border-b border-gray-50 relative group z-0">
+            <td class="p-4 align-top">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="source-icon-wrap w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 shadow-sm">
+                        <i class="source-icon text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900 review-author tracking-tight">Author</p>
+                        <div class="flex text-yellow-400 text-xs mt-0.5 rating-stars">
+                            <!-- Stars injected here -->
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td class="p-4 w-2/5 max-w-xs align-top">
+                <p class="text-gray-700 font-medium text-sm line-clamp-3 review-text pr-4 leading-relaxed">""</p>
+                <div class="mt-2 flex gap-1.5 flex-wrap review-tags">
+                    <!-- Tags injected here -->
+                </div>
+            </td>
+            <td class="p-4 align-top">
+                <p class="font-semibold text-gray-900 text-xs branch-name truncate w-32">Branch</p>
+                <p class="text-[10px] text-gray-500 mt-1 truncate w-32"><i
+                        class="fa-solid fa-user-tag text-gray-400 mr-1"></i> <span class="staff-text font-medium">Not
+                        Tagged</span></p>
+            </td>
+            <td class="p-4 align-top">
+                <span
+                    class="status-badge font-semibold px-2.5 py-1 text-[10px] rounded-lg border shadow-sm inline-block">Status</span>
+            </td>
+            <td class="p-4 text-right align-top">
+                <button
+                    class="reply-btn bg-white border border-gray-300 hover:bg-gray-50 hover:text-brand-600 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition inline-flex items-center gap-1.5 ml-auto">
+                    <i class="fa-solid fa-reply"></i> Reply
+                </button>
+            </td>
+        </tr>
+    </template>
+
+    <!-- RESTAURANT SELECTION OVERLAY -->
+    <div id="restaurantSelectionOverlay"
+        class="fixed inset-0 bg-gray-900 z-[100] flex flex-col hidden bg-[url('https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&q=80')] bg-cover bg-center">
+        <div class="absolute inset-0 bg-gray-900/80 backdrop-blur-md"></div>
+
+        <div class="relative z-10 flex flex-col h-full overflow-y-auto py-12 px-6">
+            <!-- Header -->
+            <div class="text-center mb-10 shrink-0">
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-500/20 text-brand-500 mb-6 shadow-lg border border-brand-500/30">
+                    <i class="fa-solid fa-store text-3xl"></i>
+                </div>
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4 drop-shadow-md">Select
+                    Your Location</h1>
+                <p class="text-lg text-gray-300 max-w-2xl mx-auto font-medium drop-shadow">Search for your specific
+                    restaurant branch to view its dedicated performance dashboard, reviews, and insights.</p>
+            </div>
+
+            <!-- Search Area -->
+            <div
+                class="max-w-3xl w-full mx-auto bg-gray-900/40 backdrop-blur-xl p-8 rounded-3xl border border-gray-700 shadow-2xl shrink-0">
+                <form id="overlaySearchForm" class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1 relative">
+                        <i
+                            class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                        <input type="text" id="overlaySearchInput"
+                            class="w-full bg-gray-800/80 border border-gray-600 text-white rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 shadow-inner placeholder-gray-500 text-lg transition-all"
+                            placeholder="Search by restaurant name or address..." required>
+                    </div>
+                    <button type="submit" id="overlaySearchBtn"
+                        class="px-8 py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-bold transition-colors shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 text-lg whitespace-nowrap">
+                        <i class="fa-solid fa-satellite-dish"></i> Locate
+                    </button>
+                </form>
+                <div id="overlaySearchError"
+                    class="hidden mt-4 text-sm font-semibold text-red-400 bg-red-900/30 p-4 rounded-xl border border-red-800/50 flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i> <span>Location not found. Please try a different
+                        search term.</span>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="overlayLoading" class="hidden mt-12 flex-col items-center justify-center shrink-0">
+                <div class="w-16 h-16 border-4 border-brand-500/30 border-t-brand-500 rounded-full animate-spin mb-6">
+                </div>
+                <p class="text-white text-xl font-bold tracking-wide">Syncing Location Data...</p>
+                <p class="text-gray-400 mt-2">Fetching reviews, photos, and insights.</p>
+            </div>
+
+            <!-- Results Area -->
+            <div id="overlayResultsContainer" class="hidden mt-8 max-w-4xl w-full mx-auto pb-12">
+                <!-- Results injected here -->
+            </div>
+
+        </div>
+    </div>
+
+    <!-- DATABASE & INTERACTION LOGIC -->
+    <script type="module" src="../js/dashboard.js"></script>
+
+</body>
+
+</html>
