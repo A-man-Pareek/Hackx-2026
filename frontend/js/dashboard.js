@@ -964,90 +964,29 @@ document.getElementById('addRestaurantForm').onsubmit = async (e) => {
     try {
         const bName = document.getElementById('searchName').value.trim();
         const bLoc = document.getElementById('searchLocation').value.trim();
-        const query = encodeURIComponent(`${bName} ${bLoc}`);
+        const token = await auth.currentUser.getIdToken();
+        const payload = {
+            name: bName,
+            location: bLoc,
+            managerId: currentUser.uid
+        };
 
-        let details = null;
-        let placeId = `mock_place_${Date.now()}`;
-
-        const fullMockReviews = [
-            { author_name: "Sarah Jenkins", rating: 5, text: "Excellent atmosphere and incredibly fast service! The staff was super friendly.", time: Math.floor(Date.now() / 1000) - 3600 },
-            { author_name: "Mark T.", rating: 2, text: "My order was completely wrong and it took 30 minutes to get someone to fix it. Very disappointing.", time: Math.floor(Date.now() / 1000) - 86400 },
-            { author_name: "Emily R.", rating: 4, text: "Great experience overall, but the music was a bit too loud for a business meeting.", time: Math.floor(Date.now() / 1000) - 172800 },
-            { author_name: "David Chen", rating: 1, text: "Absolutely terrible. Found a hair in my food and the manager didn't even care.", time: Math.floor(Date.now() / 1000) - 259200 },
-            { author_name: "Jessica Al.", rating: 5, text: "A hidden gem! The recommended specials were out of this world. I am coming back next week!", time: Math.floor(Date.now() / 1000) - 604800 },
-            { author_name: "Michael B.", rating: 3, text: "It was okay. Nothing spectacular but not bad either. Pricing is a bit high.", time: Math.floor(Date.now() / 1000) - 904800 },
-            { author_name: "Anna W.", rating: 5, text: "Best place in town! Will recommend it to everyone I know.", time: Math.floor(Date.now() / 1000) - 1004800 },
-            { author_name: "Oliver S.", rating: 4, text: "Good food, nice ambiance. Wait time was a little long.", time: Math.floor(Date.now() / 1000) - 1204800 },
-            { author_name: "Tom H.", rating: 2, text: "Disappointing. The steak was overcooked.", time: Math.floor(Date.now() / 1000) - 1304800 },
-            { author_name: "Rachel G.", rating: 5, text: "Love the new menu items. Try the dessert!", time: Math.floor(Date.now() / 1000) - 1404800 }
-        ];
-
-        try {
-            let query = restaurantName;
-            if (!query.toLowerCase().includes('restaurant') && !query.toLowerCase().includes('cafe') && !query.toLowerCase().includes('food')) {
-                query += " restaurant"; // Require dining places to block names/cities
-            }
-
-            const searchRes = await fetch("https://places.googleapis.com/v1/places:searchText", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY, "X-Goog-FieldMask": "places.id" },
-                body: JSON.stringify({ textQuery: query })
-            });
-
-            if (!searchRes.ok) throw new Error("Google Places API failed");
-            const searchData = await searchRes.json();
-
-            if (!searchData.places || !searchData.places.length) throw new Error("No restaurant or cafe found matching this name worldwide.");
-
-            placeId = searchData.places[0].id;
-
-            const detRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,rating,userRatingCount,reviews,photos,regularOpeningHours,internationalPhoneNumber,websiteUri,businessStatus&key=${GOOGLE_PLACES_API_KEY}`);
-            if (!detRes.ok) throw new Error("Failed to fetch detailed data for the restaurant");
-
-            const detData = await detRes.json();
-
-            details = {
-                name: detData.displayName?.text || bName,
-                formatted_address: detData.formattedAddress || bLoc,
-                rating: detData.rating || 0,
-                user_ratings_total: detData.userRatingCount || 0,
-                reviews: (detData.reviews || []).map(r => ({
-                    author_name: r.authorAttribution?.displayName || "Google User",
-                    rating: r.rating || 0,
-                    text: r.text?.text || "No text provided.",
-                    time: r.publishTime ? Math.floor(new Date(r.publishTime).getTime() / 1000) : Math.floor(Date.now() / 1000)
-                }))
-            };
-
-            // Pad API response up to 10 reviews if it comes back short
-            if (details.reviews.length < 10) {
-                const needed = 10 - details.reviews.length;
-                details.reviews = [...details.reviews, ...fullMockReviews.slice(0, needed)];
-            }
-        } catch (apiErr) {
-            console.warn("API Search failed. Bubbling up error instead of falling back to mock data.", apiErr);
-            throw apiErr;
-        }
-
-        const branchRef = await addDoc(collection(db, "branches"), {
-            name: details.name, location: bLoc, managerId: currentUser.uid, placeId: placeId, status: "active",
-            totalReviews: details.user_ratings_total || 0, averageRating: details.rating || 0, createdAt: serverTimestamp()
+        const res = await fetch("http://127.0.0.1:8000/api/search-and-add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
         });
 
-        if (details.reviews && details.reviews.length > 0) {
-            for (const r of details.reviews) {
-                await addDoc(collection(db, "reviews"), {
-                    branchId: branchRef.id, source: "google", externalReviewId: `${r.author_name}_${r.time * 1000}`,
-                    authorName: r.author_name, rating: r.rating, reviewText: r.text || "No text provided.",
-                    sentiment: r.rating > 3 ? 'positive' : r.rating === 3 ? 'neutral' : 'negative',
-                    status: r.rating <= 2 ? "critical" : "normal", responseStatus: "pending",
-                    externalTimestamp: r.time * 1000, syncedAt: serverTimestamp(), createdAt: serverTimestamp()
-                });
-            }
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || "Failed to add restaurant. Please check network.");
         }
 
         await initDataFetch();
-        document.getElementById('branchSelector').value = branchRef.id;
+        document.getElementById('branchSelector').value = data.branchId;
         renderDashboard();
         addMod.classList.add('hidden');
     } catch (e) { err.textContent = e.message; err.classList.remove('hidden'); }
