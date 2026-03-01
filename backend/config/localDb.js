@@ -1,59 +1,64 @@
 /**
  * Local JSON File Database - Drop-in replacement for Firestore during development
- * Stores data in a local JSON file so reviews persist across server restarts.
+ * Stores data in collection-specific JSON files so data is isolated and persists across server restarts.
  */
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const DB_DIR = path.join(__dirname, '..', 'data');
-const DB_FILE = path.join(DB_DIR, 'reviews.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(DB_DIR)) {
     fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
-// Load existing data or initialize empty
-function loadDB() {
+/**
+ * Load existing data or initialize empty for a specific collection
+ */
+function loadDB(collectionName) {
+    const filePath = path.join(DB_DIR, `${collectionName}.json`);
     try {
-        if (fs.existsSync(DB_FILE)) {
-            const raw = fs.readFileSync(DB_FILE, 'utf-8');
+        if (fs.existsSync(filePath)) {
+            const raw = fs.readFileSync(filePath, 'utf-8');
             return JSON.parse(raw);
         }
     } catch (err) {
-        console.error('[LocalDB] Error loading database, resetting:', err.message);
+        console.error(`[LocalDB] Error loading database for ${collectionName}, resetting:`, err.message);
     }
     return {};
 }
 
-function saveDB(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+/**
+ * Save data for a specific collection
+ */
+function saveDB(collectionName, data) {
+    const filePath = path.join(DB_DIR, `${collectionName}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 /**
- * Mimics Firestore's db.collection('reviews').doc() pattern
- * Returns an object with { id, set(), update(), get() }
+ * Mimics Firestore's db.collection('name').doc() pattern
  */
-function createDocRef(id) {
+function createDocRef(collectionName, id) {
     const docId = id || crypto.randomUUID();
     return {
         id: docId,
         async set(data) {
-            const db = loadDB();
+            const db = loadDB(collectionName);
             db[docId] = { ...data };
-            saveDB(db);
+            saveDB(collectionName, db);
         },
         async update(data) {
-            const db = loadDB();
+            const db = loadDB(collectionName);
             if (!db[docId]) {
-                throw new Error(`Document ${docId} not found`);
+                throw new Error(`Document ${docId} not found in ${collectionName}`);
             }
             db[docId] = { ...db[docId], ...data };
-            saveDB(db);
+            saveDB(collectionName, db);
         },
         async get() {
-            const db = loadDB();
+            const db = loadDB(collectionName);
             const data = db[docId] || null;
             return {
                 exists: !!data,
@@ -67,20 +72,20 @@ function createDocRef(id) {
 /**
  * Mimics Firestore's db.collection('collectionName') pattern
  */
-function collection(name) {
+function collection(collectionName) {
     return {
         doc(id) {
-            return createDocRef(id);
+            return createDocRef(collectionName, id);
         },
         async add(data) {
-            const ref = createDocRef();
+            const ref = createDocRef(collectionName);
             await ref.set(data);
             return ref;
         },
         where(field, op, value) {
             return {
                 async get() {
-                    const db = loadDB();
+                    const db = loadDB(collectionName);
                     const results = [];
                     for (const [id, doc] of Object.entries(db)) {
                         let match = false;
@@ -94,10 +99,9 @@ function collection(name) {
                     };
                 },
                 where(field2, op2, value2) {
-                    // Chained where
                     return {
                         async get() {
-                            const db = loadDB();
+                            const db = loadDB(collectionName);
                             const results = [];
                             for (const [id, doc] of Object.entries(db)) {
                                 let match1 = false, match2 = false;
@@ -119,10 +123,10 @@ function collection(name) {
 }
 
 /**
- * Get all reviews (for the GET endpoint)
+ * Get all data for a specific collection
  */
-function getAllReviews() {
-    const db = loadDB();
+function getAll(collectionName) {
+    const db = loadDB(collectionName);
     return Object.entries(db).map(([id, data]) => ({ id, ...data }));
 }
 
@@ -130,4 +134,5 @@ const localDb = {
     collection
 };
 
-module.exports = { localDb, getAllReviews };
+module.exports = { localDb, getAll };
+

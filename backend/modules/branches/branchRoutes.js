@@ -28,4 +28,24 @@ router.post(
     branchController.createBranch
 );
 
+/**
+ * @route   POST /branches/register
+ * @desc    Public endpoint for restaurants to self-register and get a QR code
+ * @access  Public
+ */
+router.post(
+    '/register',
+    branchController.registerBranch
+);
+
+/**
+ * @route   GET /branches/public
+ * @desc    Public endpoint to fetch all active branches for selection
+ * @access  Public
+ */
+router.get(
+    '/public',
+    branchController.getPublicBranches
+);
+
 module.exports = router;

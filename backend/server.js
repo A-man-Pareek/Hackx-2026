@@ -18,6 +18,7 @@ const responseRoutes = require('./modules/responses/responseRoutes');
 const analyticsRoutes = require('./modules/analytics/analyticsRoutes'); // NEW Analytics routes
 const aiRoutes = require('./modules/ai/aiRoutes');
 const templateRoutes = require('./modules/templates/templateRoutes');
+const qrRoutes = require('./modules/qr/qrRoutes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/responses', responseRoutes);
 app.use('/api/analytics', analyticsRoutes); // NEW Analytics routes
 app.use('/api/ai', aiRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/qr', qrRoutes);
 
 // ---------------------------------------------------------------------------
 // Route: /api/sync-reviews

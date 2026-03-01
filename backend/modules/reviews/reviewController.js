@@ -1,5 +1,4 @@
 const { localDb: db } = require('../../config/localDb'); // Use local JSON DB for persistence
-const { getAllReviews } = require('../../config/localDb');
 const ReviewService = require('./reviewService');
 
 /**
