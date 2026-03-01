@@ -106,7 +106,9 @@ async function handleSuccessfulLogin(firebaseUser) {
         document.getElementById('userRoleDisplay').textContent = currentUser.role.replace('_', ' ') + " • Access granted";
         document.getElementById('userAvatar').src = firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=1d4ed8&color=fff`;
 
-        if (currentUser.role === 'admin') document.getElementById('openAddRestaurantBtn').classList.remove('hidden');
+        if (currentUser.role === 'admin' || currentUser.role === 'restaurant_owner') {
+            document.getElementById('openAddRestaurantBtn').classList.remove('hidden');
+        }
 
         console.log("Hiding login overlay...");
         // Show workspace
