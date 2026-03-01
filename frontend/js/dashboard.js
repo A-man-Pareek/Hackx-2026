@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, getDoc, getDocs, query, orderBy, addDoc, updateDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, getDoc, getDocs, query, orderBy, addDoc, updateDoc, doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // Tab Navigation Logic
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -159,10 +159,24 @@ async function fetchStaff() {
     snap.forEach(doc => staffMap[doc.id] = doc.data().name);
 }
 
-async function fetchReviews() {
-    const snap = await getDocs(query(collection(db, "reviews"), orderBy("createdAt", "desc")));
-    allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderDashboard();
+function fetchReviews() {
+    return new Promise((resolve, reject) => {
+        let isFirstRun = true;
+        onSnapshot(query(collection(db, "reviews"), orderBy("createdAt", "desc")), (snap) => {
+            allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderDashboard();
+            if (isFirstRun) {
+                isFirstRun = false;
+                resolve();
+            }
+        }, (error) => {
+            console.error("Error fetching real-time reviews: ", error);
+            if (isFirstRun) {
+                isFirstRun = false;
+                reject(error);
+            }
+        });
+    });
 }
 
 // RENDER LOGIC
@@ -796,11 +810,16 @@ document.getElementById('replyForm').onsubmit = async (e) => {
 
     try {
         const id = document.getElementById('modalReviewId').value;
+        const replyText = document.getElementById('replyMessage').value;
         await setDoc(doc(collection(db, "responses")), {
-            reviewId: id, responseText: document.getElementById('replyMessage').value, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
+            reviewId: id, responseText: replyText, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
         });
-        await updateDoc(doc(db, "reviews", id), { responseStatus: "responded" });
-        allReviews.find(r => r.id === id).responseStatus = 'responded';
+        await updateDoc(doc(db, "reviews", id), { responseStatus: "responded", aiReply: replyText });
+        const targetReview = allReviews.find(r => r.id === id);
+        if (targetReview) {
+            targetReview.responseStatus = 'responded';
+            targetReview.aiReply = replyText;
+        }
         renderDashboard();
         closeReplyModal();
     } catch (e) { alert("Error saving response: " + e.message); }
@@ -845,8 +864,9 @@ if (bulkAiReplyBtn) {
                 await setDoc(doc(collection(db, "responses")), {
                     reviewId: r.id, responseText: responseText, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
                 });
-                await updateDoc(doc(db, "reviews", r.id), { responseStatus: "responded" });
+                await updateDoc(doc(db, "reviews", r.id), { responseStatus: "responded", aiReply: responseText });
                 r.responseStatus = 'responded';
+                r.aiReply = responseText;
                 successCount++;
             }
 
