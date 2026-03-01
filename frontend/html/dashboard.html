@@ -238,7 +238,7 @@
                                 <canvas id="sentimentDoughnut"></canvas>
                                 <div
                                     class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span id="doughnut-center" class="text-3xl font-bold text-gray-900">0%</span>
+                                    <span id="doughnut-center" class="text-3xl font-bold text-blue-400">0%</span>
                                     <span class="text-xs text-gray-500 font-medium">Positive</span>
                                 </div>
                             </div>
@@ -276,7 +276,8 @@
                                     <h3 class="font-bold text-sm uppercase tracking-wider text-brand-100">AI Insights
                                     </h3>
                                 </div>
-                                <p class="text-lg font-medium leading-relaxed mb-4">"Based on recent reviews, customers
+                                <p id="aiInsightText" class="text-lg font-medium leading-relaxed mb-4">"Based on recent
+                                    reviews, customers
                                     highly praise the atmospheric lighting and food quality, but there's a slight
                                     increase in critical feedback regarding service speed during weekend peaks."</p>
                             </div>
@@ -422,22 +423,27 @@
                     <!-- 2. Sentiment Dashboard & Staff Analytics -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
 
-                        <!-- High-Tech Pie/Doughnut Chart -->
+                        <!-- High-Tech Radar Chart -->
                         <div
                             class="glass-card p-6 flex flex-col items-center justify-center bg-gradient-to-br from-[#1c1917] via-[#0c0a09] to-black border-[#292524] relative overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]">
                             <!-- Background Glow -->
                             <div
-                                class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-brand-900/30 via-transparent to-transparent opacity-60 pointer-events-none">
+                                class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent opacity-60 pointer-events-none">
                             </div>
 
-                            <h3
-                                class="font-bold text-gray-300 w-full mb-6 z-10 text-center tracking-widest uppercase text-xs">
-                                Sentiment Analysis</h3>
+                            <div class="w-full flex justify-between items-center mb-6 z-10">
+                                <h3
+                                    class="font-bold text-gray-300 w-full mb-6 z-10 text-center tracking-widest uppercase text-xs flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-satellite-dish animate-pulse text-indigo-400"></i> AI
+                                    Performance Radar
+                                </h3>
+                            </div>
+
                             <div class="relative w-56 h-56 mb-4 z-10 flex">
-                                <canvas id="analyticsPieChart"></canvas>
-                                <!-- Center Glow for Doughnut -->
+                                <canvas id="analyticsRadarChart"></canvas>
+                                <!-- Center Glow for Radar -->
                                 <div
-                                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-brand-500/20 rounded-full blur-[20px] pointer-events-none">
+                                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-indigo-500/10 rounded-full blur-[25px] pointer-events-none">
                                 </div>
                             </div>
                         </div>
@@ -455,7 +461,7 @@
                                             <th class="p-4">Staff Member</th>
                                             <th class="p-4 text-center">Mentions</th>
                                             <th class="p-4 text-center">Avg Rating</th>
-                                            <th class="p-4 text-right">Sentiment Score</th>
+                                            <th class="p-4 text-right">Impact Tier</th>
                                         </tr>
                                     </thead>
                                     <tbody id="staffTableBody" class="divide-y divide-[#292524] text-sm">
@@ -630,7 +636,7 @@
                         <i class="source-icon text-lg"></i>
                     </div>
                     <div>
-                        <p class="font-semibold text-gray-900 review-author tracking-tight">Author</p>
+                        <p class="font-bold text-blue-400 review-author tracking-tight">Author</p>
                         <div class="flex text-yellow-400 text-xs mt-0.5 rating-stars">
                             <!-- Stars injected here -->
                         </div>

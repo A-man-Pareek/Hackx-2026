@@ -1,18 +1,23 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 let auth;
+let db;
 
-// Fetch config from backend to keep API key out of frontend source code
-fetch('http://localhost:8000/auth/firebase-config')
-    .then(res => res.json())
-    .then(data => {
-        if (data.success && data.config) {
-            const app = initializeApp(data.config);
-            auth = getAuth(app);
-        }
-    })
-    .catch(err => console.error("Error loading Firebase config:", err));
+// Firebase Config
+const firebaseConfig = {
+    apiKey: "AIzaSyBthIwz58nk23yTy8ntgN0T0ATqKUSHZbU",
+    authDomain: "hackx26.firebaseapp.com",
+    projectId: "hackx26",
+    storageBucket: "hackx26.firebasestorage.app",
+    messagingSenderId: "569116765255",
+    appId: "1:569116765255:web:d7b86db5f99f01a29bd562"
+};
+
+const app = initializeApp(firebaseConfig);
+auth = getAuth(app);
+db = getFirestore(app);
 
 const signInButton = document.getElementById("signIn");
 const signUpButton = document.getElementById("signUp");
@@ -72,30 +77,20 @@ signUpForm.addEventListener('submit', async (e) => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        const idToken = await user.getIdToken();
 
-        // Create user deeply in our system database
-        const response = await fetch('http://localhost:8000/auth/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`
-            },
-            body: JSON.stringify({
-                name,
-                role: selectedRole
-            })
+        // Create user deeply in our system database directly via Firestore
+        await setDoc(doc(db, "users", user.uid), {
+            name: name,
+            email: email,
+            role: selectedRole,
+            isActive: true,
+            createdAt: serverTimestamp()
         });
 
-        const data = await response.json();
-        if (data.success) {
-            alert(`Welcome to ReviewIQ! Successfully registered as a ${selectedRole.replace('_', ' ')}.`);
-            container.classList.remove("right-panel-active"); // switch to sign in
-        } else {
-            alert(`Error mapping system profile: ${data.error}`);
-        }
+        alert(`Welcome to ReviewIQ! Successfully registered as a ${selectedRole.replace('_', ' ')}.`);
+        container.classList.remove("right-panel-active"); // switch to sign in
     } catch (error) {
-        alert(`Firebase Registration Failed: ${error.message}`);
+        alert(`Registration Failed: ${error.message}`);
     }
 });
 
@@ -115,10 +110,18 @@ signInForm.addEventListener('submit', async (e) => {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        const idToken = await user.getIdToken();
-
-        // Save token to localStorage for subsequent backend requests
-        localStorage.setItem('reviewiq_auth_token', idToken);
+        // Determine role and Redirect
+        if (db) {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                const role = userDoc.data().role;
+                if (role === 'customer') {
+                    alert("Welcome back! Redirecting to Customer Portal.");
+                    window.location.href = '../html/customer.html';
+                    return;
+                }
+            }
+        }
 
         // Final UI Redirect
         alert("Logged in successfully! Let's get to work.");

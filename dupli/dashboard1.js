@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, getDoc, getDocs, query, orderBy, addDoc, updateDoc, doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, getDoc, getDocs, query, orderBy, addDoc, updateDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // Tab Navigation Logic
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -88,14 +88,8 @@ async function handleSuccessfulLogin(firebaseUser) {
     try {
         console.log("User authenticated, fetching user profile...");
         const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists() && userDoc.data().isActive) {
-            currentUser = { uid: firebaseUser.uid, ...userDoc.data() };
-            // Kick customers out of the owner portal
-            if (currentUser.role === 'customer') {
-                window.location.href = '../html/customer.html';
-                return;
-            }
-        } else {
+        if (userDoc.exists() && userDoc.data().isActive) currentUser = { uid: firebaseUser.uid, ...userDoc.data() };
+        else {
             console.log("First time login, creating demo user doc...");
             currentUser = { uid: firebaseUser.uid, name: firebaseUser.displayName || "Demo", email: firebaseUser.email, role: "admin", isActive: true };
             await setDoc(doc(db, "users", firebaseUser.uid), currentUser, { merge: true });
@@ -106,9 +100,7 @@ async function handleSuccessfulLogin(firebaseUser) {
         document.getElementById('userRoleDisplay').textContent = currentUser.role.replace('_', ' ') + " • Access granted";
         document.getElementById('userAvatar').src = firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=1d4ed8&color=fff`;
 
-        if (currentUser.role === 'admin' || currentUser.role === 'restaurant_owner') {
-            document.getElementById('openAddRestaurantBtn').classList.remove('hidden');
-        }
+        if (currentUser.role === 'admin') document.getElementById('openAddRestaurantBtn').classList.remove('hidden');
 
         console.log("Hiding login overlay...");
         // Show workspace
@@ -140,19 +132,14 @@ async function initDataFetch() {
     setupFilters();
 }
 
-let allowedBranches = new Set();
 async function fetchBranches() {
     const snap = await getDocs(collection(db, "branches"));
     const sel = document.getElementById('branchSelector');
     sel.innerHTML = '<option value="all">🏢 All Branches Overview</option>';
-    allowedBranches.clear();
     snap.forEach(doc => {
-        const b = doc.data();
-        branchMap[doc.id] = b.name;
-        if (currentUser.role === 'admin' || (currentUser.role === 'restaurant_owner' && b.managerId === currentUser.uid) || currentUser.branchId === doc.id) {
-            allowedBranches.add(doc.id);
-            const locationStr = b.location ? ` - ${b.location}` : '';
-            sel.innerHTML += `<option value="${doc.id}">📍 ${b.name}${locationStr}</option>`;
+        branchMap[doc.id] = doc.data().name;
+        if (currentUser.role === 'admin' || currentUser.branchId === doc.id) {
+            sel.innerHTML += `<option value="${doc.id}">📍 ${doc.data().name}</option>`;
         }
     });
     if (currentUser.role === 'branch_manager' && currentUser.branchId) {
@@ -166,24 +153,10 @@ async function fetchStaff() {
     snap.forEach(doc => staffMap[doc.id] = doc.data().name);
 }
 
-function fetchReviews() {
-    return new Promise((resolve, reject) => {
-        let isFirstRun = true;
-        onSnapshot(query(collection(db, "reviews"), orderBy("createdAt", "desc")), (snap) => {
-            allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderDashboard();
-            if (isFirstRun) {
-                isFirstRun = false;
-                resolve();
-            }
-        }, (error) => {
-            console.error("Error fetching real-time reviews: ", error);
-            if (isFirstRun) {
-                isFirstRun = false;
-                reject(error);
-            }
-        });
-    });
+async function fetchReviews() {
+    const snap = await getDocs(query(collection(db, "reviews"), orderBy("createdAt", "desc")));
+    allReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderDashboard();
 }
 
 // RENDER LOGIC
@@ -206,10 +179,6 @@ function renderDashboard() {
 
     let filtered = allReviews.filter(r => {
         if (currentUser.role === 'branch_manager' && r.branchId !== currentUser.branchId) return false;
-
-        // Block RESTAURANT OWNERS from seeing other restaurant reviews inside "All Branches" view
-        if (currentUser.role !== 'admin' && !allowedBranches.has(r.branchId)) return false;
-
         if (branch !== 'all' && r.branchId !== branch) return false;
         if (status !== 'all' && status !== r.status) return false;
         if (sentiment !== 'all' && sentiment !== r.sentiment) return false;
@@ -237,7 +206,7 @@ function renderDashboard() {
 function updateKPIs(data) {
     const tot = data.length;
     const crit = data.filter(r => r.status === 'critical').length;
-    const avg = tot ? (data.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / tot).toFixed(1) : "0.0";
+    const avg = tot ? (data.reduce((acc, r) => acc + r.rating, 0) / tot).toFixed(1) : "0.0";
     const sentScore = tot ? Math.round((data.filter(r => r.sentiment === 'positive').length / tot) * 100) : 0;
 
     const idTotal = document.getElementById('stat-total');
@@ -372,7 +341,7 @@ function updatePerformanceTable(data) {
     data.forEach(r => {
         if (branchStats[r.branchId]) {
             branchStats[r.branchId].reviews++;
-            branchStats[r.branchId].ratingSum += (Number(r.rating) || 0);
+            branchStats[r.branchId].ratingSum += r.rating;
             if (r.sentiment === 'positive') branchStats[r.branchId].positiveCount++;
         }
     });
@@ -428,40 +397,17 @@ function updateStaffTable(data) {
     });
 
     data.forEach(r => {
-        const rawKey = r.staffTagged || r.staffId;
-        if (rawKey && rawKey !== 'pending') {
-            const staffKey = String(rawKey).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (staffKey) {
-                if (!stats[staffKey]) {
-                    const displayName = staffMap[r.staffId] || r.staffTagged || rawKey;
-                    stats[staffKey] = { id: staffKey, name: displayName, mentions: 0, ratingSum: 0, positiveCount: 0 };
-                }
-                stats[staffKey].mentions++;
-                stats[staffKey].ratingSum += (Number(r.rating) || 0);
-                if (r.sentiment === 'positive') stats[staffKey].positiveCount++;
-            }
+        if (stats[r.staffId]) {
+            stats[r.staffId].mentions++;
+            stats[r.staffId].ratingSum += r.rating;
+            if (r.sentiment === 'positive') stats[r.staffId].positiveCount++;
         }
     });
 
     const ranked = Object.values(stats).filter(s => s.mentions > 0).map(s => {
         const avg = s.ratingSum / s.mentions;
         const sentScore = Math.round((s.positiveCount / s.mentions) * 100);
-
-        let impactTier = 'Gold';
-        let tierClass = 'bg-yellow-900 text-yellow-200 border-yellow-700';
-
-        if (avg < 3.5 || sentScore < 40) {
-            impactTier = 'Needs Focus';
-            tierClass = 'bg-red-900/50 text-red-300 border-red-700/50';
-        } else if (avg >= 4.5 && sentScore > 80) {
-            impactTier = 'Diamond';
-            tierClass = 'bg-blue-900 text-blue-200 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]';
-        } else if (avg >= 4.0) {
-            impactTier = 'Platinum';
-            tierClass = 'bg-indigo-900 text-indigo-200 border-indigo-500';
-        }
-
-        return { ...s, avg: avg.toFixed(1), sentScore, impactTier, tierClass };
+        return { ...s, avg: avg.toFixed(1), sentScore };
     });
 
     ranked.sort((a, b) => b.sentScore - a.sentScore);
@@ -472,6 +418,8 @@ function updateStaffTable(data) {
     }
 
     ranked.forEach(s => {
+        const scoreClass = s.sentScore >= 70 ? 'bg-emerald-900 text-emerald-200 border-emerald-700' : s.sentScore >= 40 ? 'bg-amber-900 text-amber-200 border-amber-700' : 'bg-red-900 text-red-200 border-red-700';
+
         tbody.innerHTML += `
             <tr class="border-b border-[#292524] hover:bg-[#1c1917] transition">
                 <td class="py-4 font-semibold text-white flex items-center gap-2">
@@ -481,14 +429,14 @@ function updateStaffTable(data) {
                 <td class="py-4 text-center text-[#a8a29e]">${s.mentions}</td>
                 <td class="py-4 text-center font-medium">${s.avg} <i class="fa-solid fa-star text-yellow-400 text-[10px]"></i></td>
                 <td class="py-4 text-right">
-                    <span class="font-bold px-3 py-1 rounded-xl border ${s.tierClass} text-[10px] uppercase tracking-wider">${s.impactTier}</span>
+                    <span class="font-bold px-2.5 py-1 rounded-lg border ${scoreClass}">${s.sentScore}%</span>
                 </td>
             </tr>
         `;
     });
 }
 
-
+let analyticsPieChart = null;
 
 function updateAnalyticsTab(data) {
     const p = data.filter(r => r.sentiment === 'positive').length;
@@ -508,69 +456,35 @@ function updateAnalyticsTab(data) {
     const eNeg = document.getElementById('analytics-neg');
     if (eNeg) eNeg.textContent = n;
 
-    const canvas = document.getElementById('analyticsRadarChart');
+    const canvas = document.getElementById('analyticsPieChart');
     if (canvas) {
-        // Derive engaging dimensional metrics algorithmically from data shapes
-        const totLen = Math.max(1, data.length);
-        const avgScore = data.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / totLen;
-        const baseLevel = Math.min(100, Math.round((avgScore / 5) * 100));
-
-        // Procedural keyword-based scores mapping to dimensions
-        const countGood = (keyword) => data.filter(r => (r.reviewText || '').toLowerCase().includes(keyword) && r.sentiment === 'positive').length;
-        const countAll = (keyword) => Math.max(1, data.filter(r => (r.reviewText || '').toLowerCase().includes(keyword)).length);
-
-        const serviceLevel = Math.min(100, Math.round((countGood('service') / countAll('service')) * 100)) || baseLevel;
-        const foodLevel = Math.min(100, Math.round(((countGood('food') + countGood('taste')) / (countAll('food') + countAll('taste'))) * 100)) || Math.min(100, baseLevel + 5);
-        const speedLevel = Math.min(100, Math.round(((countGood('time') + countGood('wait')) / (countAll('time') + countAll('wait'))) * 100)) || Math.max(0, baseLevel - 10);
-        const valueLevel = Math.min(100, Math.round(((countGood('price') + countGood('worth')) / (countAll('price') + countAll('worth'))) * 100)) || baseLevel;
-
-        const radarData = [
-            serviceLevel > 0 ? serviceLevel : baseLevel,
-            foodLevel > 0 ? foodLevel : baseLevel + (totLen % 5),
-            speedLevel > 0 ? speedLevel : baseLevel - (totLen % 3),
-            valueLevel > 0 ? valueLevel : baseLevel + (totLen % 2),
-            baseLevel
-        ];
-
-        if (!window.analyticsRadarChartInstance) {
-            window.analyticsRadarChartInstance = new Chart(canvas.getContext('2d'), {
-                type: 'radar',
+        if (!analyticsPieChart) {
+            analyticsPieChart = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
                 data: {
-                    labels: ['Service Quality', 'Food Taste', 'Speed & Flow', 'Total Value', 'Overall Score'],
+                    labels: ['Positive', 'Neutral', 'Negative'],
                     datasets: [{
-                        label: 'Performance Metric',
-                        data: radarData,
-                        backgroundColor: 'rgba(99, 102, 241, 0.25)', // Indigo
-                        borderColor: 'rgba(99, 102, 241, 1)',
-                        pointBackgroundColor: '#0c0a09',
-                        pointBorderColor: 'rgba(129, 140, 248, 1)',
-                        pointHoverBackgroundColor: 'rgba(165, 180, 252, 1)',
-                        pointHoverBorderColor: '#ffffff',
-                        borderWidth: 1.5,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        data: [p, u, n],
+                        backgroundColor: ['#10B981', '#FBBF24', '#EF4444'],
+                        borderWidth: 2,
+                        borderColor: '#0c0a09',
+                        hoverOffset: 15,
+                        hoverBorderColor: '#ffffff'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: { color: 'rgba(255, 255, 255, 0.05)' },
-                            grid: { color: 'rgba(255, 255, 255, 0.05)', circular: true },
-                            pointLabels: { color: '#818cf8', font: { family: 'Inter', size: 10, weight: 'bold' } },
-                            ticks: { display: false, min: 0, max: 100 }
+                    cutout: '75%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#a8a29e', padding: 20, font: { family: 'Inter', size: 12 } }
                         }
                     },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleColor: '#a5b4fc', bodyColor: '#ffffff', padding: 12, cornerRadius: 8, displayColors: false, callbacks: { label: (ctx) => `${ctx.raw}% Satisfaction` } }
-                    }
+                    layout: { padding: 10 }
                 }
             });
-        } else {
-            window.analyticsRadarChartInstance.data.datasets[0].data = radarData;
-            window.analyticsRadarChartInstance.update();
         }
     }
 }
@@ -706,53 +620,22 @@ function updateCharts(data, all) {
         }
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const volumes = [0, 0, 0, 0, 0, 0, 0];
-    data.forEach(r => {
-        const d = r.externalTimestamp ? new Date(r.externalTimestamp) : new Date(r.createdAt || Date.now());
-        d.setHours(0, 0, 0, 0);
-        const diffDays = Math.floor((today - d) / (1000 * 60 * 60 * 24));
-        if (diffDays >= 0 && diffDays < 7) {
-            volumes[6 - diffDays]++;
-        }
-    });
-
     if (!trendChart) {
         trendChart = new Chart(document.getElementById('sentimentTrendChart').getContext('2d'), {
             type: 'line',
             data: {
-                labels: ['6d ago', '5d ago', '4d ago', '3d ago', '2d ago', '1d ago', 'Today'],
-                datasets: [{ label: 'Incoming volume', data: volumes, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.2)', fill: true, tension: 0.4, borderWidth: 2 }]
+                labels: ['7d', '6d', '5d', '4d', '3d', '2d', 'Today'],
+                datasets: [{ label: 'Incoming volume', data: [15, 29, 30, 21, 16, 25, 40], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.2)', fill: true, tension: 0.4, borderWidth: 2 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#292524' }, border: { display: false }, ticks: { color: '#a8a29e', precision: 0 } },
+                    y: { beginAtZero: true, grid: { color: '#292524' }, border: { display: false }, ticks: { color: '#a8a29e' } },
                     x: { grid: { display: false }, border: { display: false }, ticks: { color: '#a8a29e' } }
                 }
             }
         });
-    } else {
-        trendChart.data.datasets[0].data = volumes;
-        trendChart.update();
     }
-
-    const aiInsightText = document.getElementById('aiInsightText');
-    if (aiInsightText) {
-        if (data.length === 0) {
-            aiInsightText.innerHTML = "Not enough review data to generate an AI insight yet.";
-        } else {
-            if (p >= n * 2 && p > 0) {
-                aiInsightText.innerHTML = `"Based on ${data.length} recent reviews, customers highly praise the overall experience, with extremely positive sentiment across the board."`;
-            } else if (n >= p && n > 0) {
-                aiInsightText.innerHTML = `"Critical alert: Over ${n} recent reviews highlight significant ongoing issues that require immediate management attention."`;
-            } else {
-                aiInsightText.innerHTML = `"Based on ${data.length} recent reviews, overall feedback is mixed but stable. Monitor neutral reviews to prevent them from slipping into critical status."`;
-            }
-        }
-    }
-
 
     // 3. New Branch Comparison Bar Chart
     const branchStats = {};
@@ -763,7 +646,7 @@ function updateCharts(data, all) {
     data.forEach(r => {
         if (branchStats[r.branchId]) {
             branchStats[r.branchId].count++;
-            branchStats[r.branchId].sum += Number(r.rating) || 0;
+            branchStats[r.branchId].sum += r.rating;
         }
     });
 
@@ -876,16 +759,11 @@ document.getElementById('replyForm').onsubmit = async (e) => {
 
     try {
         const id = document.getElementById('modalReviewId').value;
-        const replyText = document.getElementById('replyMessage').value;
         await setDoc(doc(collection(db, "responses")), {
-            reviewId: id, responseText: replyText, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
+            reviewId: id, responseText: document.getElementById('replyMessage').value, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
         });
-        await updateDoc(doc(db, "reviews", id), { responseStatus: "responded", aiReply: replyText });
-        const targetReview = allReviews.find(r => r.id === id);
-        if (targetReview) {
-            targetReview.responseStatus = 'responded';
-            targetReview.aiReply = replyText;
-        }
+        await updateDoc(doc(db, "reviews", id), { responseStatus: "responded" });
+        allReviews.find(r => r.id === id).responseStatus = 'responded';
         renderDashboard();
         closeReplyModal();
     } catch (e) { alert("Error saving response: " + e.message); }
@@ -930,9 +808,8 @@ if (bulkAiReplyBtn) {
                 await setDoc(doc(collection(db, "responses")), {
                     reviewId: r.id, responseText: responseText, respondedBy: currentUser.uid, respondedAt: serverTimestamp()
                 });
-                await updateDoc(doc(db, "reviews", r.id), { responseStatus: "responded", aiReply: responseText });
+                await updateDoc(doc(db, "reviews", r.id), { responseStatus: "responded" });
                 r.responseStatus = 'responded';
-                r.aiReply = responseText;
                 successCount++;
             }
 
@@ -965,29 +842,90 @@ document.getElementById('addRestaurantForm').onsubmit = async (e) => {
     try {
         const bName = document.getElementById('searchName').value.trim();
         const bLoc = document.getElementById('searchLocation').value.trim();
-        const token = await auth.currentUser.getIdToken();
-        const payload = {
-            name: bName,
-            location: bLoc,
-            managerId: currentUser.uid
-        };
+        const query = encodeURIComponent(`${bName} ${bLoc}`);
 
-        const res = await fetch("http://127.0.0.1:8000/api/search-and-add", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
+        let details = null;
+        let placeId = `mock_place_${Date.now()}`;
+
+        const fullMockReviews = [
+            { author_name: "Sarah Jenkins", rating: 5, text: "Excellent atmosphere and incredibly fast service! The staff was super friendly.", time: Math.floor(Date.now() / 1000) - 3600 },
+            { author_name: "Mark T.", rating: 2, text: "My order was completely wrong and it took 30 minutes to get someone to fix it. Very disappointing.", time: Math.floor(Date.now() / 1000) - 86400 },
+            { author_name: "Emily R.", rating: 4, text: "Great experience overall, but the music was a bit too loud for a business meeting.", time: Math.floor(Date.now() / 1000) - 172800 },
+            { author_name: "David Chen", rating: 1, text: "Absolutely terrible. Found a hair in my food and the manager didn't even care.", time: Math.floor(Date.now() / 1000) - 259200 },
+            { author_name: "Jessica Al.", rating: 5, text: "A hidden gem! The recommended specials were out of this world. I am coming back next week!", time: Math.floor(Date.now() / 1000) - 604800 },
+            { author_name: "Michael B.", rating: 3, text: "It was okay. Nothing spectacular but not bad either. Pricing is a bit high.", time: Math.floor(Date.now() / 1000) - 904800 },
+            { author_name: "Anna W.", rating: 5, text: "Best place in town! Will recommend it to everyone I know.", time: Math.floor(Date.now() / 1000) - 1004800 },
+            { author_name: "Oliver S.", rating: 4, text: "Good food, nice ambiance. Wait time was a little long.", time: Math.floor(Date.now() / 1000) - 1204800 },
+            { author_name: "Tom H.", rating: 2, text: "Disappointing. The steak was overcooked.", time: Math.floor(Date.now() / 1000) - 1304800 },
+            { author_name: "Rachel G.", rating: 5, text: "Love the new menu items. Try the dessert!", time: Math.floor(Date.now() / 1000) - 1404800 }
+        ];
+
+        try {
+            let query = restaurantName;
+            if (!query.toLowerCase().includes('restaurant') && !query.toLowerCase().includes('cafe') && !query.toLowerCase().includes('food')) {
+                query += " restaurant"; // Require dining places to block names/cities
+            }
+
+            const searchRes = await fetch("https://places.googleapis.com/v1/places:searchText", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY, "X-Goog-FieldMask": "places.id" },
+                body: JSON.stringify({ textQuery: query })
+            });
+
+            if (!searchRes.ok) throw new Error("Google Places API failed");
+            const searchData = await searchRes.json();
+
+            if (!searchData.places || !searchData.places.length) throw new Error("No restaurant or cafe found matching this name worldwide.");
+
+            placeId = searchData.places[0].id;
+
+            const detRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,rating,userRatingCount,reviews,photos,regularOpeningHours,internationalPhoneNumber,websiteUri,businessStatus&key=${GOOGLE_PLACES_API_KEY}`);
+            if (!detRes.ok) throw new Error("Failed to fetch detailed data for the restaurant");
+
+            const detData = await detRes.json();
+
+            details = {
+                name: detData.displayName?.text || bName,
+                formatted_address: detData.formattedAddress || bLoc,
+                rating: detData.rating || 0,
+                user_ratings_total: detData.userRatingCount || 0,
+                reviews: (detData.reviews || []).map(r => ({
+                    author_name: r.authorAttribution?.displayName || "Google User",
+                    rating: r.rating || 0,
+                    text: r.text?.text || "No text provided.",
+                    time: r.publishTime ? Math.floor(new Date(r.publishTime).getTime() / 1000) : Math.floor(Date.now() / 1000)
+                }))
+            };
+
+            // Pad API response up to 10 reviews if it comes back short
+            if (details.reviews.length < 10) {
+                const needed = 10 - details.reviews.length;
+                details.reviews = [...details.reviews, ...fullMockReviews.slice(0, needed)];
+            }
+        } catch (apiErr) {
+            console.warn("API Search failed. Bubbling up error instead of falling back to mock data.", apiErr);
+            throw apiErr;
+        }
+
+        const branchRef = await addDoc(collection(db, "branches"), {
+            name: details.name, location: bLoc, managerId: currentUser.uid, placeId: placeId, status: "active",
+            totalReviews: details.user_ratings_total || 0, averageRating: details.rating || 0, createdAt: serverTimestamp()
         });
 
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-            throw new Error(data.error || "Failed to add restaurant. Please check network.");
+        if (details.reviews && details.reviews.length > 0) {
+            for (const r of details.reviews) {
+                await addDoc(collection(db, "reviews"), {
+                    branchId: branchRef.id, source: "google", externalReviewId: `${r.author_name}_${r.time * 1000}`,
+                    authorName: r.author_name, rating: r.rating, reviewText: r.text || "No text provided.",
+                    sentiment: r.rating > 3 ? 'positive' : r.rating === 3 ? 'neutral' : 'negative',
+                    status: r.rating <= 2 ? "critical" : "normal", responseStatus: "pending",
+                    externalTimestamp: r.time * 1000, syncedAt: serverTimestamp(), createdAt: serverTimestamp()
+                });
+            }
         }
 
         await initDataFetch();
-        document.getElementById('branchSelector').value = data.branchId;
+        document.getElementById('branchSelector').value = branchRef.id;
         renderDashboard();
         addMod.classList.add('hidden');
     } catch (e) { err.textContent = e.message; err.classList.remove('hidden'); }

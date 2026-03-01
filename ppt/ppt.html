@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReviewIQ - Presentation</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: { brand: { orange: '#f59e0b', dark: '#d97706', light: '#fbbf24' } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #0c0a09;
+            --surface-color: #1c1917;
+            --surface-border: #292524;
+            --text-main: #ffffff;
+            --text-muted: #a8a29e;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            overflow: hidden;
+            /* Hide scrollbars, handled by JS */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .slide-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-in-out, transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            transform: translateY(30px) scale(0.98);
+            padding: 4rem;
+            box-sizing: border-box;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+            z-index: 10;
+        }
+
+        .slide.prev {
+            transform: translateY(-30px) scale(1.02);
+        }
+
+        /* Glassmorphic Cards */
+        .glass-card {
+            background: rgba(28, 25, 23, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--surface-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-radius: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        }
+
+        .nav-dots {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.75rem;
+            z-index: 50;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--surface-border);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background-color: var(--brand-orange);
+            transform: scale(1.3);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 50;
+        }
+
+        .controls button {
+            background: var(--surface-color);
+            border: 1px solid var(--surface-border);
+            color: var(--text-main);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .controls button:hover:not(:disabled) {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: var(--brand-orange);
+            color: var(--brand-orange);
+        }
+
+        .controls button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* Gradient Text */
+        .text-gradient {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Ambient Glow */
+        .ambient-glow {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        /* Print formatting for PDF export */
+        @media print {
+            body {
+                overflow: visible !important;
+                height: auto !important;
+                background-color: var(--bg-color) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .slide-container {
+                height: auto !important;
+                display: block !important;
+            }
+
+            .slide {
+                position: relative !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                transform: none !important;
+                page-break-after: always;
+                height: 100vh !important;
+                padding: 2rem !important;
+            }
+
+            .nav-dots,
+            .controls {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Ambient Background Effects -->
+    <div class="ambient-glow bg-amber-500 w-[500px] h-[500px] top-[-200px] left-[-200px]"></div>
+    <div class="ambient-glow bg-orange-600 w-[600px] h-[600px] bottom-[-200px] right-[-200px]"></div>
+
+    <div class="slide-container" id="slideContainer">
+
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <div class="text-center max-w-4xl relative">
+                <div
+                    class="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-brand-orange/10 border border-brand-orange/30 shadow-[0_0_30px_rgba(245,158,11,0.2)] mb-8">
+                    <i class="fa-solid fa-chart-pie text-5xl text-brand-orange"></i>
+                </div>
+                <h1 class="text-6xl md:text-8xl font-black mb-6 tracking-tight drop-shadow-lg">
+                    Welcome to <span class="text-gradient">ReviewIQ</span>
+                </h1>
+                <p class="text-xl md:text-3xl text-gray-400 font-medium mb-10 tracking-wide">
+                    The Centralized, AI-Powered Review Management System
+                </p>
+                <div
+                    class="flex items-center justify-center gap-4 text-sm font-bold tracking-widest uppercase text-gray-500">
+                    <span>Google Places Sync</span> • <span>AI Insights</span> • <span>Secure Auth</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide">
+            <div class="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <span class="text-brand-orange font-black tracking-widest uppercase text-sm mb-3 block">Problem
+                        Definition / Background</span>
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">Fragmented Feedback & Lost Insights.
+                    </h2>
+                    <p class="text-lg text-gray-400 mb-6 leading-relaxed">
+                        Organizations receive feedback from internal forms, staff, and platforms like Google or Zomato.
+                        These are scattered across systems with no centralized visibility, making sentiment monitoring
+                        and timely responses impossible.
+                    </p>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-4 text-base text-gray-300">
+                            <i
+                                class="fa-solid fa-xmark text-red-500 mt-1 border border-red-500/30 bg-red-500/10 p-1.5 rounded-lg"></i>
+                            <span><b>No Centralization:</b> Reviews distributed across internal systems and 3rd party
+                                platforms.</span>
+                        </li>
+                        <li class="flex items-start gap-4 text-base text-gray-300">
+                            <i
+                                class="fa-solid fa-xmark text-red-500 mt-1 border border-red-500/30 bg-red-500/10 p-1.5 rounded-lg"></i>
+                            <span><b>Unstructured Collection:</b> Lack of direct review collection mechanisms
+                                post-service.</span>
+                        </li>
+                        <li class="flex items-start gap-4 text-base text-gray-300">
+                            <i
+                                class="fa-solid fa-xmark text-red-500 mt-1 border border-red-500/30 bg-red-500/10 p-1.5 rounded-lg"></i>
+                            <span><b>Categorization Struggles:</b> Difficulty filtering by food, service, staff, or
+                                ambience.</span>
+                        </li>
+                        <li class="flex items-start gap-4 text-base text-gray-300">
+                            <i
+                                class="fa-solid fa-xmark text-red-500 mt-1 border border-red-500/30 bg-red-500/10 p-1.5 rounded-lg"></i>
+                            <span><b>Delayed Action:</b> Inconsistent responses impacting brand reputation and
+                                retention.</span>
+                        </li>
+                        <li class="flex items-start gap-4 text-base text-gray-300">
+                            <i
+                                class="fa-solid fa-xmark text-red-500 mt-1 border border-red-500/30 bg-red-500/10 p-1.5 rounded-lg"></i>
+                            <span><b>Blind Spots:</b> No structured branch-wise or staff-wise performance
+                                insights.</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="glass-card p-12 flex items-center justify-center min-h-[400px] relative">
+                    <!-- Decorative visuals to represent fragmentation -->
+                    <div class="absolute inset-0 flex items-center justify-center opacity-30">
+                        <i class="fa-solid fa-server absolute top-10 left-10 text-5xl text-blue-500"></i>
+                        <i class="fa-brands fa-google absolute bottom-10 right-10 text-5xl text-blue-400"></i>
+                        <i class="fa-solid fa-mobile-screen absolute top-20 right-20 text-5xl text-emerald-500"></i>
+                        <i class="fa-regular fa-comment-dots absolute bottom-20 left-20 text-5xl text-amber-500"></i>
+                    </div>
+                    <i class="fa-solid fa-network-wired text-9xl text-gray-600 opacity-50 drop-shadow-2xl"></i>
+                    <i
+                        class="fa-solid fa-link-slash text-red-500 text-6xl absolute drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: The Solution -->
+        <div class="slide">
+            <div class="text-center max-w-4xl mx-auto mb-16">
+                <span class="text-brand-orange font-black tracking-widest uppercase text-sm mb-3 block">The
+                    Solution</span>
+                <h2 class="text-5xl font-bold">Unify, Analyze, and Automate</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
+                <!-- Card 1 -->
+                <div class="glass-card p-8 group hover:-translate-y-2 transition-transform duration-300">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center mb-6">
+                        <i
+                            class="fa-solid fa-layer-group text-2xl text-blue-400 group-hover:scale-110 transition-transform"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Centralized Dashboard</h3>
+                    <p class="text-gray-400 leading-relaxed">Aggregates internal reviews and Google Places feedback into
+                        one intelligent inbox.</p>
+                </div>
+                <!-- Card 2 -->
+                <div
+                    class="glass-card p-8 group hover:-translate-y-2 transition-transform duration-300 border-t-4 border-t-brand-orange">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-6">
+                        <i
+                            class="fa-solid fa-brain text-2xl text-amber-400 group-hover:scale-110 transition-transform"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">AI Intelligence</h3>
+                    <p class="text-gray-400 leading-relaxed">Automatically calculates sentiment scores, highlights
+                        critical issues, and generates smart replies.</p>
+                </div>
+                <!-- Card 3 -->
+                <div
+                    class="glass-card p-8 group hover:-translate-y-2 transition-transform duration-300 border-t-4 border-t-emerald-500">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-6">
+                        <i
+                            class="fa-solid fa-chart-simple text-2xl text-emerald-400 group-hover:scale-110 transition-transform"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Actionable Metrics</h3>
+                    <p class="text-gray-400 leading-relaxed">Identify top-performing branches and struggling locations
+                        through comparative performance tables.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Core Features (Dashboard) -->
+        <div class="slide">
+            <div class="max-w-6xl w-full flex flex-col md:flex-row gap-12 items-center">
+                <div class="w-full md:w-1/2">
+                    <div
+                        class="relative rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-gray-800">
+                        <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1000"
+                            alt="Dashboard Chart Mockup"
+                            class="w-full h-auto opacity-70 grayscale hover:grayscale-0 transition-all duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0c0a09] to-transparent"></div>
+                        <div class="absolute bottom-6 left-6 right-6">
+                            <div class="glass-card p-4 flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-400 uppercase">Avg Rating</p>
+                                    <p class="text-2xl font-bold text-white">4.8 <i
+                                            class="fa-solid fa-star text-brand-orange text-sm"></i></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs font-bold text-gray-400 uppercase">Sentiment</p>
+                                    <p class="text-2xl font-bold text-emerald-400">92%</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/2">
+                    <span class="text-brand-orange font-black tracking-widest uppercase text-sm mb-3 block">Feature
+                        1</span>
+                    <h2 class="text-4xl font-bold mb-6">Enterprise Analytics Overview</h2>
+                    <p class="text-lg text-gray-400 mb-6">An elegant, dark-themed command center built with Tailwind CSS
+                        and Chart.js mapping real-time data.</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-orange"></i> Live
+                            Sentiment Trend Charts</li>
+                        <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-orange"></i>
+                            Performance Ranking by Branch</li>
+                        <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-orange"></i> Urgent
+                            Issue Escalation Alerts</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Core Features (Customer Portal) -->
+        <div class="slide">
+            <div class="max-w-6xl w-full flex flex-col md:flex-row-reverse gap-12 items-center">
+                <div class="w-full md:w-1/2">
+                    <div
+                        class="relative rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-gray-800 bg-[#1c1917] p-8">
+                        <div class="flex gap-4 mb-6">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-brand-orange to-red-500"></div>
+                            <div>
+                                <h4 class="font-bold text-white">Alen Thomas</h4>
+                                <div class="flex text-brand-orange text-xs"><i class="fa-solid fa-star"></i><i
+                                        class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
+                                        class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                            </div>
+                        </div>
+                        <p class="text-gray-300 border-l-2 border-surface-border pl-4">"Absolutely incredible service.
+                            The staff was super friendly and the UI of this portal is stunningly beautiful."</p>
+                        <div class="mt-6 flex justify-between">
+                            <div
+                                class="px-3 py-1 bg-black/50 rounded-full text-xs font-bold text-gray-500 border border-gray-800">
+                                <i class="fa-solid fa-location-dot"></i> New York Branch
+                            </div>
+                            <div
+                                class="px-3 py-1 bg-emerald-900/40 text-emerald-400 rounded-full text-[10px] font-bold uppercase border border-emerald-800/50">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Positive
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/2">
+                    <span class="text-brand-orange font-black tracking-widest uppercase text-sm mb-3 block">Feature
+                        2</span>
+                    <h2 class="text-4xl font-bold mb-6">Sleek Customer Portal</h2>
+                    <p class="text-lg text-gray-400 mb-6">We didn't just build an administrative tool. We built a
+                        customer-facing interface that oozes premium quality.</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-orange"></i>
+                            Consistent Glassmorphic Aesthetics</li>
+                        <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-orange"></i> Location
+                            Directory & Discovery</li>
+                        <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-orange"></i>
+                            Transparent Global Review Feed</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: AI Superpowers -->
+        <div class="slide">
+            <div class="text-center max-w-4xl mx-auto mb-16">
+                <div
+                    class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 mb-6 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
+                    <i class="fa-solid fa-wand-magic-sparkles text-4xl text-indigo-400"></i>
+                </div>
+                <h2 class="text-5xl font-bold mb-4">Powered by Advanced AI</h2>
+                <p class="text-xl text-gray-400">Replacing manual labor with automated intelligence.</p>
+            </div>
+            <div class="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="glass-card p-10 border-t-4 border-t-indigo-500">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Monthly AI Overview</h3>
+                    <p class="text-gray-400 mb-6 leading-relaxed">The system synthesizes thousands of scattered reviews
+                        into an Executive Summary, directly extracting Top 5 Root Causes for Positives and Negatives.
+                    </p>
+                    <div
+                        class="bg-indigo-900/20 p-4 rounded-xl border border-indigo-500/20 text-sm text-indigo-200 italic">
+                        "Overall Sentiment is Mixed. Service delays are recurring themes. Immediate retraining
+                        recommended."
+                    </div>
+                </div>
+                <div class="glass-card p-10 border-t-4 border-t-brand-orange">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Auto-Responder Generator</h3>
+                    <p class="text-gray-400 mb-6 leading-relaxed">Save hours of typing. The intelligent inbox reads
+                        context, customer mood, and location, generating personalized, professional replies with one
+                        click.</p>
+                    <button
+                        class="w-full py-3 bg-brand-orange hover:bg-brand-dark rounded-xl text-black font-bold transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-reply"></i> Generate Reply
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Tech Stack -->
+        <div class="slide">
+            <div class="text-center max-w-4xl mx-auto mb-16">
+                <span class="text-brand-orange font-black tracking-widest uppercase text-sm mb-3 block">Under the
+                    Hood</span>
+                <h2 class="text-5xl font-bold">The Technology Stack</h2>
+            </div>
+            <div class="flex flex-wrap justify-center gap-8 max-w-5xl">
+                <!-- Tech 1 -->
+                <div class="glass-card p-8 w-64 text-center">
+                    <i
+                        class="fa-brands fa-html5 text-5xl text-orange-500 mb-4 drop-shadow-[0_0_10px_rgba(249,115,22,0.5)]"></i>
+                    <h3 class="font-bold text-lg">HTML5 / JS</h3>
+                    <p class="text-xs text-gray-500 mt-2">Core structure and dynamic client-side rendering.</p>
+                </div>
+                <!-- Tech 2 -->
+                <div class="glass-card p-8 w-64 text-center">
+                    <i
+                        class="fa-solid fa-wind text-5xl text-cyan-400 mb-4 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]"></i>
+                    <h3 class="font-bold text-lg">Tailwind CSS</h3>
+                    <p class="text-xs text-gray-500 mt-2">Utility-first, responsive, and modern glassmorphic styling.
+                    </p>
+                </div>
+                <!-- Tech 3 -->
+                <div class="glass-card p-8 w-64 text-center">
+                    <i
+                        class="fa-brands fa-google text-5xl text-blue-500 mb-4 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]"></i>
+                    <h3 class="font-bold text-lg">Firebase Auth/Firestore</h3>
+                    <p class="text-xs text-gray-500 mt-2">Secure access control (RBAC) and real-time NoSQL data syncing.
+                    </p>
+                </div>
+                <!-- Tech 4 -->
+                <div class="glass-card p-8 w-64 text-center">
+                    <i
+                        class="fa-solid fa-robot text-5xl text-emerald-400 mb-4 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]"></i>
+                    <h3 class="font-bold text-lg">Google & Gemini APIs</h3>
+                    <p class="text-xs text-gray-500 mt-2">Places API for location sync, Gemini for intelligent
+                        aggregation.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Conclusion -->
+        <div class="slide">
+            <div class="text-center max-w-4xl relative">
+                <i class="fa-solid fa-quote-left text-6xl text-brand-orange/20 absolute -top-10 -left-10"></i>
+                <h1 class="text-6xl font-black mb-6 tracking-tight drop-shadow-lg leading-tight">
+                    Turn Feedback into your <span class="text-gradient">Advantage</span>.
+                </h1>
+                <p class="text-2xl text-gray-400 font-medium mb-12">
+                    Start resolving issues before they impact your brand reputation.
+                </p>
+                <div class="flex items-center justify-center gap-6">
+                    <a href="../frontend/html/login.html"
+                        class="px-8 py-4 bg-brand-orange hover:bg-brand-dark rounded-full text-black font-black uppercase tracking-wider transition-all hover:scale-105 shadow-[0_0_20px_rgba(245,158,11,0.4)]">
+                        Launch Demo
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Navigation Overlay -->
+    <div class="nav-dots" id="navDots">
+        <!-- Dots generated by JS -->
+    </div>
+
+    <div class="controls">
+        <button id="prevBtn" title="Previous Slide"><i class="fa-solid fa-chevron-left"></i></button>
+        <button id="nextBtn" title="Next Slide"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const dotsContainer = document.getElementById('navDots');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        let currentSlide = 0;
+
+        // Initialize dots
+        slides.forEach((_, index) => {
+            const dot = document.createElement('div');
+            dot.classList.add('dot');
+            if (index === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => goToSlide(index));
+            dotsContainer.appendChild(dot);
+        });
+
+        const dots = document.querySelectorAll('.dot');
+
+        function updateUI() {
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                } else if (index < currentSlide) {
+                    slide.classList.add('prev');
+                }
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === slides.length - 1;
+        }
+
+        function goToSlide(index) {
+            currentSlide = index;
+            updateUI();
+        }
+
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                updateUI();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateUI();
+            }
+        }
+
+        prevBtn.addEventListener('click', prevSlide);
+        nextBtn.addEventListener('click', nextSlide);
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Space') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+
+</html>
