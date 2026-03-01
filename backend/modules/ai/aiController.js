@@ -38,6 +38,29 @@ const suggestReply = async (req, res) => {
     }
 };
 
+const generateMonthlyOverview = async (req, res) => {
+    try {
+        const { positiveReviews, negativeReviews } = req.body;
+
+        if (!Array.isArray(positiveReviews) || !Array.isArray(negativeReviews)) {
+            return res.status(400).json({ success: false, error: 'Positive and negative reviews must be arrays' });
+        }
+
+        const overviewData = await aiService.generateMonthlyOverview(positiveReviews, negativeReviews);
+
+        if (!overviewData) {
+            return res.status(500).json({ success: false, error: 'Failed to generate AI monthly overview' });
+        }
+
+        return res.status(200).json({ success: true, data: overviewData });
+
+    } catch (error) {
+        console.error('generateMonthlyOverview Controller Error:', error);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+};
+
 module.exports = {
-    suggestReply
+    suggestReply,
+    generateMonthlyOverview
 };

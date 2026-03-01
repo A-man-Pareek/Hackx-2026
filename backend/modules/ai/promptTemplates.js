@@ -19,8 +19,41 @@ const getDeepInsightsPrompt = (reviewsTextArray) => {
     };
 };
 
+const getMonthlyOverviewPrompt = (positiveReviews, negativeReviews) => {
+    return {
+        prompt: `You are an AI data analyst for a restaurant group. I will provide you with top positive and negative reviews.
+Return exactly valid JSON with the following structure:
+{
+    "executiveSummary": "A 1-paragraph summary of the overall sentiment, strengths, and weaknesses.",
+    "topPositives": [
+        "Insight 1 (string)",
+        "Insight 2 (string)",
+        "Insight 3 (string)",
+        "Insight 4 (string)",
+        "Insight 5 (string)"
+    ],
+    "topNegatives": [
+        "Insight 1 (string)",
+        "Insight 2 (string)",
+        "Insight 3 (string)",
+        "Insight 4 (string)",
+        "Insight 5 (string)"
+    ]
+}
+
+Positive Reviews:
+${positiveReviews.map((r, i) => `${i + 1}. Rating: ${r.rating} - ${r.reviewText}`).join('\\n')}
+
+Negative Reviews:
+${negativeReviews.map((r, i) => `${i + 1}. Rating: ${r.rating} - ${r.reviewText}`).join('\\n')}
+`,
+        temperature: 0.3,
+    };
+};
+
 module.exports = {
     getReviewAnalysisPrompt,
     getSuggestReplyPrompt,
-    getDeepInsightsPrompt
+    getDeepInsightsPrompt,
+    getMonthlyOverviewPrompt
 };

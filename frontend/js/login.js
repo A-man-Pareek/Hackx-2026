@@ -119,11 +119,15 @@ signInForm.addEventListener('submit', async (e) => {
                     alert("Welcome back! Redirecting to Customer Portal.");
                     window.location.href = '../html/customer.html';
                     return;
+                } else if (role === 'restaurant_owner' || role === 'branch_manager') {
+                    alert("Logged in successfully! Let's get to work.");
+                    window.location.href = '../html/select-branch.html';
+                    return;
                 }
             }
         }
 
-        // Final UI Redirect
+        // Final UI Redirect (Fallback for admin)
         alert("Logged in successfully! Let's get to work.");
         window.location.href = '../html/dashboard.html';
     } catch (error) {

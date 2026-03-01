@@ -10,4 +10,11 @@ const aiController = require('./aiController');
  */
 router.post('/suggest-reply', authenticate, aiController.suggestReply);
 
+/**
+ * @route   POST /api/ai/monthly-overview
+ * @desc    Generate monthly AI overview from review data
+ * @access  Private
+ */
+router.post('/monthly-overview', authenticate, aiController.generateMonthlyOverview);
+
 module.exports = router;

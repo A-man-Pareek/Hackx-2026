@@ -576,93 +576,70 @@ function updateAnalyticsTab(data) {
 }
 
 // MULTI-AI MONTHLY OVERVIEW
-function generateMonthlyAIOverview(data) {
+async function generateMonthlyAIOverview(data) {
     const posList = document.getElementById('ai-positives-list');
     const negList = document.getElementById('ai-negatives-list');
     const sumText = document.getElementById('ai-overview-text');
 
     if (!posList || !negList || !sumText) return;
 
-    // Simulate API delay
     posList.innerHTML = '<li class="flex items-start gap-3 text-sm text-gray-400"><i class="fa-solid fa-spinner fa-spin text-emerald-400 mt-1"></i> Analyzing positive feedback with Gemini API...</li>';
     negList.innerHTML = '<li class="flex items-start gap-3 text-sm text-gray-400"><i class="fa-solid fa-spinner fa-spin text-red-400 mt-1"></i> Analyzing negative feedback with Gemini API...</li>';
     sumText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> Synthesizing executive summary...';
 
-    setTimeout(() => {
-        const positives = data.filter(r => r.sentiment === 'positive').sort((a, b) => b.rating - a.rating || b.time - a.time).slice(0, 5);
-        const negatives = data.filter(r => r.sentiment === 'negative').sort((a, b) => a.rating - b.rating || b.time - a.time).slice(0, 5);
+    const positives = data.filter(r => r.sentiment === 'positive').sort((a, b) => b.rating - a.rating || b.time - a.time).slice(0, 5);
+    const negatives = data.filter(r => r.sentiment === 'negative').sort((a, b) => a.rating - b.rating || b.time - a.time).slice(0, 5);
 
-        const extractInsight = (text, isPositive) => {
-            const t = text.toLowerCase();
-            if (isPositive) {
-                if (t.includes('staff') || t.includes('service') || t.includes('waiter') || t.includes('friendly')) return "Exceptional, friendly, and attentive staff service.";
-                if (t.includes('food') || t.includes('delicious') || t.includes('taste') || t.includes('amazing')) return "High quality, delicious, and well-prepared food offerings.";
-                if (t.includes('clean') || t.includes('atmosphere') || t.includes('ambience') || t.includes('vibe')) return "Great restaurant ambience and pristine cleanliness.";
-                if (t.includes('fast') || t.includes('quick')) return "Extremely quick and efficient service times.";
-                return "Consistently fantastic overall experience that exceeds expectations.";
-            } else {
-                if (t.includes('wait') || t.includes('slow') || t.includes('time') || t.includes('long')) return "Unacceptable wait times for food delivery and seating.";
-                if (t.includes('rude') || t.includes('staff') || t.includes('service') || t.includes('attitude')) return "Poor staff attitude and frustratingly inattentive service.";
-                if (t.includes('cold') || t.includes('taste') || t.includes('food') || t.includes('bad')) return "Subpar food quality, including temperature and taste issues.";
-                if (t.includes('price') || t.includes('expensive') || t.includes('cost')) return "Pricing feels disproportionately high for the value provided.";
-                return "Overall dining experience significantly fell short of expectations.";
-            }
-        };
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const res = await fetch("http://127.0.0.1:8000/api/ai/monthly-overview", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ positiveReviews: positives, negativeReviews: negatives })
+        });
+        const result = await res.json();
 
-        // Generate Positives HTML
-        if (positives.length > 0) {
-            posList.innerHTML = positives.map(r => {
-                const insight = extractInsight(r.reviewText, true);
-                const staffMention = r.staffId !== 'unassigned' && staffMap[r.staffId] ? ` (Validated by praise for: <b>${staffMap[r.staffId]}</b>)` : '';
-                return `
+        if (res.ok && result.success && result.data) {
+            const overview = result.data;
+
+            let summaryStr = `<strong>Based on an AI analysis of ${data.length} recent reviews:</strong><br><br>${overview.executiveSummary || 'No summary generated.'}`;
+            sumText.innerHTML = summaryStr;
+
+            if (overview.topPositives && overview.topPositives.length > 0) {
+                posList.innerHTML = overview.topPositives.map(insight => `
                 <li class="flex items-start gap-3 text-sm text-gray-300 bg-[#1c1917] p-3 rounded-lg border border-[#292524] shadow-sm relative pl-8">
                     <i class="fa-solid fa-check text-emerald-500 absolute left-3 top-4"></i>
                     <div>
-                        <span class="font-semibold text-emerald-400">AI Highlight:</span> ${insight}${staffMention} 
-                        <span class="text-xs text-gray-500 block mt-1">Found in ${r.authorName}'s ${r.rating}★ review</span>
+                        <span class="font-semibold text-emerald-400">AI Highlight:</span> ${insight} 
                     </div>
-                </li>`;
-            }).join('');
-        } else {
-            posList.innerHTML = '<li class="text-sm text-gray-400 italic">Not enough positive data to extract insights.</li>';
-        }
+                </li>`).join('');
+            } else {
+                posList.innerHTML = '<li class="text-sm text-gray-400 italic">Not enough positive data to extract insights.</li>';
+            }
 
-        // Generate Negatives HTML
-        if (negatives.length > 0) {
-            negList.innerHTML = negatives.map(r => {
-                const insight = extractInsight(r.reviewText, false);
-                const staffMention = r.staffId !== 'unassigned' && staffMap[r.staffId] ? ` (Issue correlated with: <b>${staffMap[r.staffId]}</b>)` : '';
-                return `
+            if (overview.topNegatives && overview.topNegatives.length > 0) {
+                negList.innerHTML = overview.topNegatives.map(insight => `
                 <li class="flex items-start gap-3 text-sm text-gray-300 bg-[#1c1917] p-3 rounded-lg border border-[#292524] shadow-sm relative pl-8">
                     <i class="fa-solid fa-triangle-exclamation text-red-500 absolute left-3 top-4"></i>
                     <div>
-                        <span class="font-semibold text-red-400">AI Root Cause:</span> ${insight}${staffMention}
-                        <span class="text-xs text-gray-500 block mt-1">Found in ${r.authorName}'s ${r.rating}★ review</span>
+                        <span class="font-semibold text-red-400">AI Root Cause:</span> ${insight}
                     </div>
-                </li>`;
-            }).join('');
+                </li>`).join('');
+            } else {
+                negList.innerHTML = '<li class="text-sm text-gray-400 italic">Great news! No significant negative trends detected.</li>';
+            }
         } else {
-            negList.innerHTML = '<li class="text-sm text-gray-400 italic">Great news! No significant negative trends detected.</li>';
+            throw new Error(result.error || "Failed to load insights.");
         }
-
-        // Generate Executive Summary
-        const totalPos = data.filter(r => r.sentiment === 'positive').length;
-        const total = data.length || 1;
-        const score = (totalPos / total) * 100;
-
-        let summaryStr = `<strong>Based on an AI analysis of ${data.length} recent reviews:</strong><br><br>`;
-
-        if (score >= 80) {
-            summaryStr += `✨ <strong>Overall Sentiment is Excellent.</strong> Staff service is highly praised, with frequent mentions of attentive and friendly behavior. The ambience continues to be a strong draw for customers. There are minimal complaints, indicating strong operational health. Keep maintaining these high standards!`;
-        } else if (score >= 50) {
-            summaryStr += `⚖️ <strong>Overall Sentiment is Mixed.</strong> While there are solid aspects to the service and food, inconsistencies are holding back the overall experience rating. Some staff members receive high praise, while others are flagged for slow service during peak hours. The ambience is generally acceptable. Focus training on consistency across all shifts.`;
-        } else {
-            summaryStr += `⚠️ <strong>Overall Sentiment Needs Immediate Attention.</strong> Service delays and staff attitude are recurring themes in negative feedback. Customers repeatedly mention waiting too long and feeling unvalued. The ambience cannot make up for the operational shortfalls. Immediate retraining and policy review are recommended.`;
-        }
-
-        sumText.innerHTML = summaryStr;
-
-    }, 1500); // 1.5s delay for realistic "AI computation"
+    } catch (e) {
+        console.error("AI Overview Error:", e);
+        sumText.innerHTML = `<span class="text-red-400">Error loading insights: ${e.message}</span>`;
+        posList.innerHTML = '<li class="text-sm text-gray-400 italic">Unable to load positive insights.</li>';
+        negList.innerHTML = '<li class="text-sm text-gray-400 italic">Unable to load negative insights.</li>';
+    }
 }
 
 const refreshAiBtn = document.getElementById('refreshAiInsightsBtn');

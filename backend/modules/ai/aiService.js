@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { getReviewAnalysisPrompt, getSuggestReplyPrompt, getDeepInsightsPrompt } = require('./promptTemplates');
+const { getReviewAnalysisPrompt, getSuggestReplyPrompt, getDeepInsightsPrompt, getMonthlyOverviewPrompt } = require('./promptTemplates');
 
 // Lazy initialize Gemini client to ensure safety around missing env vars
 let genAI = null;
@@ -106,8 +106,32 @@ const generateInsights = async (reviewsTextArray) => {
     }
 };
 
+const generateMonthlyOverview = async (positiveReviews, negativeReviews) => {
+    if (!process.env.GEMINI_API_KEY) return null;
+    try {
+        const client = getGenAIClient();
+        const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const promptConfig = getMonthlyOverviewPrompt(positiveReviews, negativeReviews);
+
+        const responseResult = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: promptConfig.prompt }] }],
+            generationConfig: {
+                temperature: promptConfig.temperature,
+                responseMimeType: 'application/json'
+            }
+        });
+
+        const content = responseResult.response.text();
+        return JSON.parse(content);
+    } catch (error) {
+        console.error('AI Monthly Overview Error:', error.message);
+        return null;
+    }
+};
+
 module.exports = {
     analyzeReview,
     suggestReply,
-    generateInsights
+    generateInsights,
+    generateMonthlyOverview
 };
