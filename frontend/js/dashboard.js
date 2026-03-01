@@ -144,7 +144,7 @@ async function fetchBranches() {
     sel.innerHTML = '<option value="all">🏢 All Branches Overview</option>';
     snap.forEach(doc => {
         branchMap[doc.id] = doc.data().name;
-        if (currentUser.role === 'admin' || currentUser.branchId === doc.id) {
+        if (currentUser.role === 'admin' || currentUser.role === 'restaurant_owner' || currentUser.branchId === doc.id) {
             sel.innerHTML += `<option value="${doc.id}">📍 ${doc.data().name}</option>`;
         }
     });
@@ -212,7 +212,7 @@ function renderDashboard() {
 function updateKPIs(data) {
     const tot = data.length;
     const crit = data.filter(r => r.status === 'critical').length;
-    const avg = tot ? (data.reduce((acc, r) => acc + r.rating, 0) / tot).toFixed(1) : "0.0";
+    const avg = tot ? (data.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / tot).toFixed(1) : "0.0";
     const sentScore = tot ? Math.round((data.filter(r => r.sentiment === 'positive').length / tot) * 100) : 0;
 
     const idTotal = document.getElementById('stat-total');
@@ -626,22 +626,53 @@ function updateCharts(data, all) {
         }
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const volumes = [0, 0, 0, 0, 0, 0, 0];
+    data.forEach(r => {
+        const d = r.externalTimestamp ? new Date(r.externalTimestamp) : new Date(r.createdAt || Date.now());
+        d.setHours(0, 0, 0, 0);
+        const diffDays = Math.floor((today - d) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays < 7) {
+            volumes[6 - diffDays]++;
+        }
+    });
+
     if (!trendChart) {
         trendChart = new Chart(document.getElementById('sentimentTrendChart').getContext('2d'), {
             type: 'line',
             data: {
-                labels: ['7d', '6d', '5d', '4d', '3d', '2d', 'Today'],
-                datasets: [{ label: 'Incoming volume', data: [15, 29, 30, 21, 16, 25, 40], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.2)', fill: true, tension: 0.4, borderWidth: 2 }]
+                labels: ['6d ago', '5d ago', '4d ago', '3d ago', '2d ago', '1d ago', 'Today'],
+                datasets: [{ label: 'Incoming volume', data: volumes, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.2)', fill: true, tension: 0.4, borderWidth: 2 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#292524' }, border: { display: false }, ticks: { color: '#a8a29e' } },
+                    y: { beginAtZero: true, grid: { color: '#292524' }, border: { display: false }, ticks: { color: '#a8a29e', precision: 0 } },
                     x: { grid: { display: false }, border: { display: false }, ticks: { color: '#a8a29e' } }
                 }
             }
         });
+    } else {
+        trendChart.data.datasets[0].data = volumes;
+        trendChart.update();
     }
+
+    const aiInsightText = document.getElementById('aiInsightText');
+    if (aiInsightText) {
+        if (data.length === 0) {
+            aiInsightText.innerHTML = "Not enough review data to generate an AI insight yet.";
+        } else {
+            if (p >= n * 2 && p > 0) {
+                aiInsightText.innerHTML = `"Based on ${data.length} recent reviews, customers highly praise the overall experience, with extremely positive sentiment across the board."`;
+            } else if (n >= p && n > 0) {
+                aiInsightText.innerHTML = `"Critical alert: Over ${n} recent reviews highlight significant ongoing issues that require immediate management attention."`;
+            } else {
+                aiInsightText.innerHTML = `"Based on ${data.length} recent reviews, overall feedback is mixed but stable. Monitor neutral reviews to prevent them from slipping into critical status."`;
+            }
+        }
+    }
+
 
     // 3. New Branch Comparison Bar Chart
     const branchStats = {};
@@ -652,7 +683,7 @@ function updateCharts(data, all) {
     data.forEach(r => {
         if (branchStats[r.branchId]) {
             branchStats[r.branchId].count++;
-            branchStats[r.branchId].sum += r.rating;
+            branchStats[r.branchId].sum += Number(r.rating) || 0;
         }
     });
 
