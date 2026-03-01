@@ -151,7 +151,8 @@ async function fetchBranches() {
         branchMap[doc.id] = b.name;
         if (currentUser.role === 'admin' || (currentUser.role === 'restaurant_owner' && b.managerId === currentUser.uid) || currentUser.branchId === doc.id) {
             allowedBranches.add(doc.id);
-            sel.innerHTML += `<option value="${doc.id}">📍 ${b.name}</option>`;
+            const locationStr = b.location ? ` - ${b.location}` : '';
+            sel.innerHTML += `<option value="${doc.id}">📍 ${b.name}${locationStr}</option>`;
         }
     });
     if (currentUser.role === 'branch_manager' && currentUser.branchId) {
