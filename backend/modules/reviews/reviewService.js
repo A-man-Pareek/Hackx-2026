@@ -1,4 +1,4 @@
-const { db } = require('../../config/firebase'); // Must import from our config for Jest to mock it!
+const { localDb: db } = require('../../config/localDb'); // Use local JSON DB for persistence
 const aiService = require('../ai/aiService');
 const logger = require('../../config/logger');
 const AuditService = require('../audit/auditService');
@@ -16,11 +16,8 @@ class ReviewService {
      * Creates a new review, runs it through AI processing, applies escalation logic, and stores it in Firestore.
      */
     static async processReviewCreation(payload) {
-        const { branchId, source, rating, reviewText, category } = payload;
+        const { branchId, source, rating, reviewText, category, authorName, phoneNumber } = payload;
 
-        // 1. Initial Document Shell
-        const docRef = db.collection('reviews').doc();
-        const initialStatus = rating <= 2 ? 'critical' : 'normal';
         let isEscalatedBase = rating <= 2;
         let escalationStatusBase = isEscalatedBase ? 'escalated' : 'none';
 
@@ -29,6 +26,8 @@ class ReviewService {
             source,
             rating,
             reviewText,
+            authorName: authorName || 'Anonymous',
+            phoneNumber: phoneNumber || 'Not provided',
             category: category || 'uncategorized',
             status: 'pending', // Waiting for AI
             responseStatus: 'pending',
@@ -49,6 +48,7 @@ class ReviewService {
         };
 
         // Write initial document to Database
+        const docRef = db.collection('reviews').doc();
         await docRef.set(baseReview);
         const startTime = Date.now();
 
@@ -57,7 +57,7 @@ class ReviewService {
         const processingDuration = Date.now() - startTime;
 
         let updatePayload = {
-            status: initialStatus, // Finalize system status
+            status: baseReview.status, // Finalize system status
             aiProcessedAt: new Date(),
             aiProcessingDurationMs: processingDuration
         };
@@ -84,7 +84,7 @@ class ReviewService {
             updatePayload.aiProcessed = false;
             updatePayload.aiProcessingError = 'AI timeout or failure. Used fallback logic.';
             updatePayload.sentiment = rating <= 2 ? 'negative' : (rating === 3 ? 'neutral' : 'positive');
-            logger.warn(`AI Processing failed/timeout for review ${docRef.id}. Fallback engaged.`);
+            logger.warn(`AI Processing failed/timeout for fallback engaged.`);
         }
 
         // 3. Database Update
@@ -92,14 +92,14 @@ class ReviewService {
 
         // Phase 5.5 Audit Logger Integration
         if (updatePayload.isEscalated) {
-            await AuditService.logEvent({
-                actorUid: 'SYSTEM_AI',
-                action: 'REVIEW_ESCALATED',
-                targetId: docRef.id,
-                targetType: 'review',
-                branchId: branchId,
-                metadata: { aiSentiment: updatePayload.sentiment, sourceRating: rating }
-            });
+            // await AuditService.logEvent({
+            //     actorUid: 'SYSTEM_AI',
+            //     action: 'REVIEW_ESCALATED',
+            //     targetId: docRef.id,
+            //     targetType: 'review',
+            //     branchId: branchId,
+            //     metadata: { aiSentiment: updatePayload.sentiment, sourceRating: rating }
+            // });
         }
 
         // 4. Return Output Payload Contract
@@ -115,6 +115,8 @@ class ReviewService {
             escalationStatus: updatePayload.escalationStatus || escalationStatusBase,
             processingDurationMs: processingDuration,
             reviewText,
+            authorName: baseReview.authorName,
+            phoneNumber: baseReview.phoneNumber,
             source
         };
 
@@ -129,7 +131,8 @@ class ReviewService {
         if (resultPayload.isEscalated) {
             try {
                 // Fetch manager ID from the branch document
-                const branchDoc = await db.collection('branches').doc(branchId).get();
+                // const branchDoc = await db.collection('branches').doc(branchId).get();
+                /*
                 if (branchDoc.exists) {
                     const managerId = branchDoc.data().managerId;
                     const bName = branchDoc.data().name || branchId;
@@ -143,6 +146,7 @@ class ReviewService {
                         }
                     }
                 }
+                */
             } catch (notifyErr) {
                 logger.error('[NOTIFICATION] Error resolving critical alert pipeline:', notifyErr);
             }

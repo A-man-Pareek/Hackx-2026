@@ -24,11 +24,10 @@ router.get(
 /**
  * @route   POST /reviews
  * @desc    Submit a new review
- * @access  Private 
+ * @access  Public 
  */
 router.post(
     '/',
-    authenticate,
     validateRequest(createReviewSchema), // Phase 5.5: Validate Payload Structurally
     reviewController.createReview
 );

@@ -208,3 +208,38 @@
 {"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-1","service":"hackx-backend","timestamp":"2026-03-01 04:43:01"}
 {"level":"info","message":"[ANALYTICS] Computing metrics for branch: b-X","service":"hackx-backend","timestamp":"2026-03-01 04:43:01"}
 {"level":"info","message":"[ANALYTICS] Computing 30d trend series for branch: b-Z","service":"hackx-backend","timestamp":"2026-03-01 04:43:01"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 05:34:12"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:25:27"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:28:28"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:28:46"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:34:48"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:35:07"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:35:27"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:35:42"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:45:53"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:49:50"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:57:01"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:57:02"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 08:57:16"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:17:18"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:18:08"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:18:19"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:20:57"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:20:58"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:21:19"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:51:22"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:51:24"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:54:31"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:54:33"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:54:45"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:54:57"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:55:08"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:55:15"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:55:40"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:57:38"}
+{"level":"warn","message":"AI Processing failed/timeout for fallback engaged.","service":"hackx-backend","timestamp":"2026-03-01 09:58:19"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:58:20"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 09:58:22"}
+{"level":"warn","message":"AI Processing failed/timeout for fallback engaged.","service":"hackx-backend","timestamp":"2026-03-01 10:06:35"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 10:06:36"}
+{"level":"info","message":"[CRON] Scheduled Background Sync Job initialized to run: 0 */6 * * *","service":"hackx-backend","timestamp":"2026-03-01 10:06:38"}

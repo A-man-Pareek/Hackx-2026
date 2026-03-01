@@ -280,15 +280,15 @@ app.use((err, req, res, next) => {
     });
 });
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 19002;
 
 // Phase 9: Wrap Express inside HTTP Server for Socket.io
 const server = http.createServer(app);
 initSockets(server);
 
 if (require.main === module) {
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT} exposed to local network`);
         // Phase 9: Initialize background automation tasks
         startSyncJob();
     });

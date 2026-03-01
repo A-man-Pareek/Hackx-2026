@@ -13,6 +13,8 @@ const createReviewSchema = z.object({
         .min(1, "Rating must be at least 1")
         .max(5, "Rating must be at most 5"),
     reviewText: z.string().min(1, "Review text cannot be empty"),
+    authorName: z.string().optional(),
+    phoneNumber: z.string().optional(),
     category: z.string().optional() // Allow optional initially, AI will override
 });
 
