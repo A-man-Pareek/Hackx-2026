@@ -176,6 +176,37 @@
             opacity: 0.15;
             pointer-events: none;
         }
+
+        /* Print formatting for PDF export */
+        @media print {
+            body {
+                overflow: visible !important;
+                height: auto !important;
+                background-color: var(--bg-color) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .slide-container {
+                height: auto !important;
+                display: block !important;
+            }
+
+            .slide {
+                position: relative !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                transform: none !important;
+                page-break-after: always;
+                height: 100vh !important;
+                padding: 2rem !important;
+            }
+
+            .nav-dots,
+            .controls {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 
