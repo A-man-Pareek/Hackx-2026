@@ -138,14 +138,18 @@ async function initDataFetch() {
     setupFilters();
 }
 
+let allowedBranches = new Set();
 async function fetchBranches() {
     const snap = await getDocs(collection(db, "branches"));
     const sel = document.getElementById('branchSelector');
     sel.innerHTML = '<option value="all">🏢 All Branches Overview</option>';
+    allowedBranches.clear();
     snap.forEach(doc => {
-        branchMap[doc.id] = doc.data().name;
-        if (currentUser.role === 'admin' || currentUser.role === 'restaurant_owner' || currentUser.branchId === doc.id) {
-            sel.innerHTML += `<option value="${doc.id}">📍 ${doc.data().name}</option>`;
+        const b = doc.data();
+        branchMap[doc.id] = b.name;
+        if (currentUser.role === 'admin' || (currentUser.role === 'restaurant_owner' && b.managerId === currentUser.uid) || currentUser.branchId === doc.id) {
+            allowedBranches.add(doc.id);
+            sel.innerHTML += `<option value="${doc.id}">📍 ${b.name}</option>`;
         }
     });
     if (currentUser.role === 'branch_manager' && currentUser.branchId) {
@@ -199,6 +203,10 @@ function renderDashboard() {
 
     let filtered = allReviews.filter(r => {
         if (currentUser.role === 'branch_manager' && r.branchId !== currentUser.branchId) return false;
+
+        // Block RESTAURANT OWNERS from seeing other restaurant reviews inside "All Branches" view
+        if (currentUser.role !== 'admin' && !allowedBranches.has(r.branchId)) return false;
+
         if (branch !== 'all' && r.branchId !== branch) return false;
         if (status !== 'all' && status !== r.status) return false;
         if (sentiment !== 'all' && sentiment !== r.sentiment) return false;
