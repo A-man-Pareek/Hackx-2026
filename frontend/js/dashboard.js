@@ -88,8 +88,14 @@ async function handleSuccessfulLogin(firebaseUser) {
     try {
         console.log("User authenticated, fetching user profile...");
         const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists() && userDoc.data().isActive) currentUser = { uid: firebaseUser.uid, ...userDoc.data() };
-        else {
+        if (userDoc.exists() && userDoc.data().isActive) {
+            currentUser = { uid: firebaseUser.uid, ...userDoc.data() };
+            // Kick customers out of the owner portal
+            if (currentUser.role === 'customer') {
+                window.location.href = '../html/customer.html';
+                return;
+            }
+        } else {
             console.log("First time login, creating demo user doc...");
             currentUser = { uid: firebaseUser.uid, name: firebaseUser.displayName || "Demo", email: firebaseUser.email, role: "admin", isActive: true };
             await setDoc(doc(db, "users", firebaseUser.uid), currentUser, { merge: true });

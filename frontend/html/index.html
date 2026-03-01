@@ -725,8 +725,13 @@
         async function handleSuccessfulLogin(firebaseUser) {
             try {
                 const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-                if (userDoc.exists() && userDoc.data().isActive) currentUser = { uid: firebaseUser.uid, ...userDoc.data() };
-                else {
+                if (userDoc.exists() && userDoc.data().isActive) {
+                    currentUser = { uid: firebaseUser.uid, ...userDoc.data() };
+                    if (currentUser.role === 'customer') {
+                        window.location.href = 'customer.html';
+                        return;
+                    }
+                } else {
                     currentUser = { uid: firebaseUser.uid, name: firebaseUser.displayName || "Demo", email: firebaseUser.email, role: "admin", isActive: true };
                     await setDoc(doc(db, "users", firebaseUser.uid), currentUser, { merge: true });
                 }
